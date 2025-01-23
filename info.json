@@ -1,0 +1,8 @@
+{
+  "name": "spidertrons-manager",
+  "version": "0.1.0",
+  "title": "Spidertrons Manager",
+  "author": "Sheridan",
+  "factorio_version": "2.0",
+  "description": "A mod to manage groups of Spidertrons."
+}
