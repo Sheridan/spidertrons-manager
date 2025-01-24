@@ -1,6 +1,17 @@
 ---------------------------------------------------------------------------------------------------
-Version: 1.1.60
+Version: 0.1.0
 Date: 21. 01. 2025
   Features:
     - Initial release
 ---------------------------------------------------------------------------------------------------
+Version: 0.2.0
+Date: 24. 01. 2025
+  Major Features:
+    - The shortcut is now disabled if there are no spidertrons on the current surface.
+    - A settings button for all spidertrons in the group has been added.
+    - Ctrl+clicking the 'follow me' button simply calls the group to the player's position.
+    - The group color is now visible in the interface.
+  Changes:
+    - Groups in the table are sorted by name.
+  Optimizations:
+    - Redundant search loops for spidertrons in the current group have been removed.
