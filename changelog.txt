@@ -1,8 +1,14 @@
 ---------------------------------------------------------------------------------------------------
-Version: 0.1.0
-Date: 21. 01. 2025
-  Features:
-    - Initial release
+Version: 0.3.0
+Date: 25. 01. 2025
+  Minor Features:
+    - A more accurate search for the current player
+    - More precise setting of the button availability depending on the availability of spidertrons
+  Optimizations:
+    - Faster determination of whether there are spidertrones on the surface
+  Info:
+    - The button does not always become inaccessible when there are no spidertrons on the surface. I am aware of the following cases: after loading, the player is on the surface without spidertrons; the last spidertron was mined by the player
+
 ---------------------------------------------------------------------------------------------------
 Version: 0.2.0
 Date: 24. 01. 2025
@@ -15,3 +21,8 @@ Date: 24. 01. 2025
     - Groups in the table are sorted by name.
   Optimizations:
     - Redundant search loops for spidertrons in the current group have been removed.
+---------------------------------------------------------------------------------------------------
+Version: 0.1.0
+Date: 23. 01. 2025
+  Features:
+    - Initial release

@@ -1,5 +1,5 @@
 mod_name = spidertrons-manager
-version = 0.2.0
+version = 0.3.0
 factorio_mods_dir = /home/sheridan/software/factorio/mods
 mod_dir = $(mod_name)_$(version)
 zip_filename = $(mod_dir).zip
@@ -10,7 +10,7 @@ all: build
 build:
 	@echo "Building $(zip_filename)..."
 	@mkdir -p $(mod_dir)
-	@rsync -av --exclude='$(mod_dir)' --exclude='$(zip_filename)' --exclude='Makefile' --exclude='.git' --exclude='sshots' --exclude='.gitignore' . $(mod_dir)
+	@rsync -av --exclude='$(mod_dir)' --exclude='$(zip_filename)' --exclude-from='build_exclude.txt' . $(mod_dir)
 	@zip -r $(zip_filename) $(mod_dir)
 	@rm -rf $(mod_dir)
 	@echo "Build complete: $(zip_filename)"
