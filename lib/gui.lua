@@ -28,7 +28,12 @@ end
 
 function add_window(player, name, caption)
   local gui = player.gui.screen.add{type = "frame", name = name, direction = "vertical"}
-  gui.auto_center = true
+  if storage.window_position
+  then
+    gui.location = storage.window_position
+  else
+    gui.auto_center = true
+  end
   local close_button_name = name .. "-x-button"
   add_titlebar(gui, caption, close_button_name)
   player.opened = gui

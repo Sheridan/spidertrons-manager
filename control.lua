@@ -29,6 +29,7 @@ local function find_spidertrons(player)
   do
     if spidertron.valid
     then
+      -- if spidertron.commandable then game.print("!") end
       local group_name = player.surface.name .. "_" .. spidertron_name(spidertron)
       if not spidertrons_groups[group_name]
       then
@@ -62,12 +63,14 @@ local function open_spidertron_gui(player)
       local button_flow = sp_table.add{ type = "flow", direction = "horizontal" }
       if player.surface and player.character.surface and player.surface == player.character.surface
       then
-        add_sprite_button(button_flow, group_name .. "_follow_button", {"sm_gui.follow_me_tooltip"}, "slot_button", "utility/player_force_icon", button_tags)
+        add_sprite_button(button_flow, group_name .. "_sm_follow_button", {"sm_gui.follow_me_tooltip"}, "slot_button", "utility/player_force_icon", button_tags)
       end
-      add_sprite_button(button_flow, group_name .. "_give_remote_button", {"sm_gui.give_remote_tooltip"}, "slot_button", "shortcut/give-spidertron-remote", button_tags)
-      add_sprite_button(button_flow, group_name .. "_go_home_button"    , {"sm_gui.go_home_tooltip"}    , "slot_button", "utility/shoot_cursor_green"     , button_tags)
-      add_sprite_button(button_flow, group_name .. "_settings_button"   , {"sm_gui.settings_tooltip"}   , "slot_button", "open_spidertron_settings"       , button_tags)
+      add_sprite_button(button_flow, group_name .. "_sm_give_remote_button", {"sm_gui.give_remote_tooltip"}, "slot_button", "shortcut/give-spidertron-remote", button_tags)
+      add_sprite_button(button_flow, group_name .. "_sm_go_home_button"    , {"sm_gui.go_home_tooltip"}    , "slot_button", "utility/shoot_cursor_green"     , button_tags)
+      add_sprite_button(button_flow, group_name .. "_sm_sview_button"      , {"sm_gui.view_tooltip"}       , "slot_button", "open_spidertron_view"           , button_tags)
+      add_sprite_button(button_flow, group_name .. "_sm_settings_button"   , {"sm_gui.settings_tooltip"}   , "slot_button", "open_spidertron_settings"       , button_tags)
   end
+  storage.window_is_opened = true
 end
 
 local function apply_settings_to_group(player)
@@ -140,12 +143,28 @@ local function on_button_click_go_home(event)
   end
 end
 
+local function on_button_click_view(event)
+  local player = get_event_player(event)
+  if player
+  then
+    local spidertron = find_spidertrons(player)[event.element.tags.group_name][1]
+    player.set_controller{
+      type = defines.controllers.remote,
+      position = spidertron.position
+    }
+  end
+end
+
 local function on_button_click_settings(event)
   local player = get_event_player(event)
   if player
   then
     local group_name = event.element.tags.group_name
     storage.spidertron_manager_data.settings_source_spidertron = find_spidertrons(player)[group_name][1]
+    player.set_controller{
+      type = defines.controllers.remote,
+      position = storage.spidertron_manager_data.settings_source_spidertron.position
+    }
     player.opened = storage.spidertron_manager_data.settings_source_spidertron
     storage.spidertron_manager_data.selection_target_group = group_name
   end
@@ -170,13 +189,26 @@ local function set_shortcut_availability(event)
   local player = get_event_player(event)
   if player
   then
-    player.set_shortcut_available("open_spidertron_gui_shortcut", is_spidertrons_exists(player))
+    local is_sp_exists = is_spidertrons_exists(player)
+    player.set_shortcut_available("open_spidertron_gui_shortcut", is_sp_exists)
+    return is_sp_exists
+  end
+  return false
+end
+
+local function on_surface_changed(event)
+  local player = get_event_player(event)
+  if player.opened then player.opened = nil end
+  if set_shortcut_availability(event) and storage.window_is_opened
+  then
+    open_spidertron_gui(player)
   end
 end
 
 local function init_storage()
   storage = storage or {}
   storage.spidertron_manager_data = storage.spidertron_manager_data or { home_position = {} }
+  storage.window_position = storage.window_position or nil
 end
 
 local function register_event_handlers()
@@ -187,39 +219,49 @@ local function register_event_handlers()
   end)
 
   script.on_event(defines.events.on_gui_click, function(event)
-    if event.element.name:endswith("follow_button")      then on_button_click_followme(event); return end
-    if event.element.name:endswith("give_remote_button") then on_button_click_give_remote(event); return end
-    if event.element.name:endswith("go_home_button")     then on_button_click_go_home(event); return end
-    if event.element.name:endswith("settings_button")    then on_button_click_settings(event); return end
-    if event.element.name:endswith("-x-button")          then event.element.parent.parent.destroy(); return end
+    if event.element.name:endswith("sm_follow_button")      then on_button_click_followme(event); return end
+    if event.element.name:endswith("sm_give_remote_button") then on_button_click_give_remote(event); return end
+    if event.element.name:endswith("sm_go_home_button")     then on_button_click_go_home(event); return end
+    if event.element.name:endswith("sm_settings_button")    then on_button_click_settings(event); return end
+    if event.element.name:endswith("sm_view_button")        then on_button_click_view(event); return end
+    if event.element.name:endswith("-x-button")          then
+      event.element.parent.parent.destroy()
+      storage.window_is_opened = false
+      return
+    end
   end)
 
+  -- script.on_event(defines.events.on_gui_opened, function(event)
+  --   game.print(event.name)
+  --   game.print(event.gui_type)
+  --   if event.element and event.element.valid then game.print(event.element.name) end
+  --   if event.equipment and event.equipment.valid then game.print(event.equipment.name) end
+  --   if event.gui_type == defines.gui_type.achievement	then game.print("achievement") end
+  --   if event.gui_type == defines.gui_type.blueprint_library	then game.print("blueprint_library") end
+  --   if event.gui_type == defines.gui_type.bonus	then game.print("bonus") end
+  --   if event.gui_type == defines.gui_type.controller	then game.print("controller") end
+  --   if event.gui_type == defines.gui_type.custom	then game.print("custom") end
+  --   if event.gui_type == defines.gui_type.entity	then game.print("entity") end
+  --   if event.gui_type == defines.gui_type.equipment	then game.print("equipment") end
+  --   if event.gui_type == defines.gui_type.global_electric_network	then game.print("global_electric_network") end
+  --   if event.gui_type == defines.gui_type.item	then game.print("item") end
+  --   if event.gui_type == defines.gui_type.logistic	then game.print("logistic") end
+  --   if event.gui_type == defines.gui_type.none	then game.print("none") end
+  --   if event.gui_type == defines.gui_type.opened_entity_grid	then game.print("opened_entity_grid") end
+  --   if event.gui_type == defines.gui_type.other_player	then game.print("other_player") end
+  --   if event.gui_type == defines.gui_type.permissions	then game.print("permissions") end
+  --   if event.gui_type == defines.gui_type.player_management	then game.print("player_management") end
+  --   if event.gui_type == defines.gui_type.production	then game.print("production") end
+  --   if event.gui_type == defines.gui_type.script_inventory	then game.print("script_inventory") end
+  --   if event.gui_type == defines.gui_type.server_management	then game.print("server_management") end
+  --   if event.gui_type == defines.gui_type.tile	then game.print("tile") end
+  --   if event.gui_type == defines.gui_type.trains    then game.print("train") end
+  -- end)
+
   script.on_event(defines.events.on_gui_closed, function(event)
-    -- if event.gui_type == defines.gui_type.achievement	then game.print("achievement") end
-    -- if event.gui_type == defines.gui_type.blueprint_library	then game.print("blueprint_library") end
-    -- if event.gui_type == defines.gui_type.bonus	then game.print("bonus") end
-    -- if event.gui_type == defines.gui_type.controller	then game.print("controller") end
-    -- if event.gui_type == defines.gui_type.custom	then game.print("custom") end
-    -- if event.gui_type == defines.gui_type.entity	then game.print("entity") end
-    -- if event.gui_type == defines.gui_type.equipment	then game.print("equipment") end
-    -- if event.gui_type == defines.gui_type.global_electric_network	then game.print("global_electric_network") end
-    -- if event.gui_type == defines.gui_type.item	then game.print("item") end
-    -- if event.gui_type == defines.gui_type.logistic	then game.print("logistic") end
-    -- if event.gui_type == defines.gui_type.none	then game.print("none") end
-    -- if event.gui_type == defines.gui_type.opened_entity_grid	then game.print("opened_entity_grid") end
-    -- if event.gui_type == defines.gui_type.other_player	then game.print("other_player") end
-    -- if event.gui_type == defines.gui_type.permissions	then game.print("permissions") end
-    -- if event.gui_type == defines.gui_type.player_management	then game.print("player_management") end
-    -- if event.gui_type == defines.gui_type.production	then game.print("production") end
-    -- if event.gui_type == defines.gui_type.script_inventory	then game.print("script_inventory") end
-    -- if event.gui_type == defines.gui_type.server_management	then game.print("server_management") end
-    -- if event.gui_type == defines.gui_type.tile	then game.print("tile") end
-    -- if event.gui_type == defines.gui_type.trains    then game.print("train") end
-    -- game.print(event.name)
-    -- game.print(event.gui_type)
-    -- if event.element and event.element.valid then game.print(event.element.name) end
-    -- if event.equipment and event.equipment.valid then game.print(event.equipment.name) end
-    if event.element and event.element.valid and event.element.name == "spidertron_manager_gui" then
+    if event.element and event.element.valid and event.element.name == "spidertron_manager_gui"
+    then
+      storage.window_position = event.element.location
       event.element.destroy()
       return
     end
@@ -251,8 +293,8 @@ local function register_event_handlers()
     {filter = "name", name = "spidertron"},
   }
 
+  script.on_event(defines.events.on_player_changed_surface, on_surface_changed)
   script.on_event(defines.events.on_player_created        , set_shortcut_availability)
-  script.on_event(defines.events.on_player_changed_surface, set_shortcut_availability)
   script.on_event(defines.events.on_built_entity          , set_shortcut_availability, spider_event_filter)
   script.on_event(defines.events.on_robot_built_entity    , set_shortcut_availability, spider_event_filter)
   script.on_event(defines.events.on_entity_died           , set_shortcut_availability, spider_event_filter)

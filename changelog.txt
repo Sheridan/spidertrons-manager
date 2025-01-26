@@ -1,4 +1,19 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.4.1
+Date: 26. 01. 2025
+  Bugfixes:
+    - Fix the crash when pressing the settings button of some other mods
+---------------------------------------------------------------------------------------------------
+Version: 0.4.0
+Date: 26. 01. 2025
+  Bugfixes:
+    - Open spidertron settings even if they are far away
+    - The spidertron list window now updates when the surface changes
+  Minor Features:
+    - Window position is now being stored
+  Major Features:
+    - Added a button to view the spidertrons group
+---------------------------------------------------------------------------------------------------
 Version: 0.3.0
 Date: 25. 01. 2025
   Minor Features:

@@ -46,5 +46,16 @@ data:extend({
     flags = {"gui-icon"},
     mipmap_count = 2,
     scale = 0.5
+  },
+  {
+    type = "sprite",
+    name = "open_spidertron_view",
+    filename = "__spidertrons-manager__/graphics/icons/eye-64.png",
+    -- priority = "extra-high-no-scale",
+    width = 64,
+    height = 64,
+    flags = {"gui-icon"},
+    mipmap_count = 2,
+    scale = 0.5
   }
 })

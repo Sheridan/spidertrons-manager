@@ -1,5 +1,5 @@
 mod_name = spidertrons-manager
-version = 0.3.0
+version = $(shell jq -r '.version' info.json)
 factorio_mods_dir = /home/sheridan/software/factorio/mods
 mod_dir = $(mod_name)_$(version)
 zip_filename = $(mod_dir).zip
