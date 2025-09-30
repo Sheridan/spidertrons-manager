@@ -135,9 +135,26 @@ local function on_button_click_go_home(event)
         player.opened = nil
       end
     else -- go home
-      for _, spidertron in ipairs(find_spidertrons(player)[group_name])
-      do
-        spidertron.autopilot_destination = storage.spidertron_manager_data.home_position[group_name]
+      local home_position = storage.spidertron_manager_data.home_position[group_name]
+      if home_position then
+                -- Check if SpidertronEnhancements is installed and has the pathfinding interface
+        if remote.interfaces["SpidertronEnhancementsInternal-pf"] and remote.interfaces["SpidertronEnhancementsInternal-pf"]["use-remote"] then
+          -- Use smart pathfinding from SpidertronEnhancements
+          for _, spidertron in ipairs(find_spidertrons(player)[group_name]) do
+            if spidertron.follow_target then
+            spidertron.follow_target = nil
+          end
+          
+          -- Clear current destination by setting to nil
+          spidertron.autopilot_destination = nil
+          remote.call("SpidertronEnhancementsInternal-pf", "use-remote", spidertron, home_position)
+          end
+        else
+          -- Fall back to vanilla pathfinding
+          for _, spidertron in ipairs(find_spidertrons(player)[group_name]) do
+            spidertron.autopilot_destination = home_position
+          end
+        end
       end
     end
   end
