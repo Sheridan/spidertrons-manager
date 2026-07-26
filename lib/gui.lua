@@ -27,6 +27,10 @@ local function add_titlebar(gui, caption, close_button_name)
 end
 
 function add_window(player, name, caption)
+  local existing = player.gui.screen[name]
+  if existing and existing.valid then
+    existing.destroy()
+  end
   local gui = player.gui.screen.add{type = "frame", name = name, direction = "vertical"}
   if storage.window_position
   then

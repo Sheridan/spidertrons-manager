@@ -38,6 +38,17 @@ data:extend({
   },
   {
     type = "sprite",
+    name = "give_spidertron_remote",
+    filename = "__spidertrons-manager__/graphics/icons/give_spidertron_remote-64.png",
+    -- priority = "extra-high-no-scale",
+    width = 64,
+    height = 64,
+    flags = {"gui-icon"},
+    mipmap_count = 2,
+    scale = 0.5
+  },
+  {
+    type = "sprite",
     name = "open_spidertron_settings",
     filename = "__spidertrons-manager__/graphics/icons/open_spidertron_settings-64.png",
     -- priority = "extra-high-no-scale",

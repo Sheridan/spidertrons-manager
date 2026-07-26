@@ -61,13 +61,13 @@ local function open_spidertron_gui(player)
       sp_table.add{ type = "label", caption = spidertron_name(sp_leader) }
       sp_table.add{ type = "label", caption = #spidertrons }
       local button_flow = sp_table.add{ type = "flow", direction = "horizontal" }
-      if player.surface and player.character.surface and player.surface == player.character.surface
+      if player.character and player.character.surface and player.surface == player.character.surface
       then
         add_sprite_button(button_flow, group_name .. "_sm_follow_button", {"sm_gui.follow_me_tooltip"}, "slot_button", "utility/player_force_icon", button_tags)
       end
-      add_sprite_button(button_flow, group_name .. "_sm_give_remote_button", {"sm_gui.give_remote_tooltip"}, "slot_button", "shortcut/give-spidertron-remote", button_tags)
+      add_sprite_button(button_flow, group_name .. "_sm_view_button"       , {"sm_gui.view_tooltip"}       , "slot_button", "open_spidertron_view"           , button_tags)
+      add_sprite_button(button_flow, group_name .. "_sm_give_remote_button", {"sm_gui.give_remote_tooltip"}, "slot_button", "give_spidertron_remote"         , button_tags)
       add_sprite_button(button_flow, group_name .. "_sm_go_home_button"    , {"sm_gui.go_home_tooltip"}    , "slot_button", "utility/shoot_cursor_green"     , button_tags)
-      add_sprite_button(button_flow, group_name .. "_sm_sview_button"      , {"sm_gui.view_tooltip"}       , "slot_button", "open_spidertron_view"           , button_tags)
       add_sprite_button(button_flow, group_name .. "_sm_settings_button"   , {"sm_gui.settings_tooltip"}   , "slot_button", "open_spidertron_settings"       , button_tags)
   end
   storage.window_is_opened = true
@@ -75,7 +75,7 @@ end
 
 local function apply_settings_to_group(player)
   local spidertrons = find_spidertrons(player)[storage.spidertron_manager_data.selection_target_group]
-  if #spidertrons > 1
+  if spidertrons and #spidertrons > 1
     then
       local src_spidertron = storage.spidertron_manager_data.settings_source_spidertron
       for _, spidertron in ipairs(spidertrons)
@@ -102,7 +102,18 @@ local function on_button_click_followme(event)
     do
       if event.control
       then
-        spidertron.autopilot_destination = player.character.position
+        -- Use smart pathfinding from SpidertronEnhancements if installed and has the pathfinding interface
+        if remote.interfaces["SpidertronEnhancementsInternal-pf"] and remote.interfaces["SpidertronEnhancementsInternal-pf"]["use-remote"] then
+          if spidertron.follow_target then
+            spidertron.follow_target = nil
+          end
+
+          spidertron.autopilot_destination = nil
+          remote.call("SpidertronEnhancementsInternal-pf", "use-remote", spidertron, player.character.position)
+        else
+          -- Fall back to vanilla pathfinding
+          spidertron.autopilot_destination = player.character.position
+        end
       else
         spidertron.follow_target = player.character
       end
@@ -137,9 +148,8 @@ local function on_button_click_go_home(event)
     else -- go home
       local home_position = storage.spidertron_manager_data.home_position[group_name]
       if home_position then
-                -- Check if SpidertronEnhancements is installed and has the pathfinding interface
+        -- Use smart pathfinding from SpidertronEnhancements if installed and has the pathfinding interface
         if remote.interfaces["SpidertronEnhancementsInternal-pf"] and remote.interfaces["SpidertronEnhancementsInternal-pf"]["use-remote"] then
-          -- Use smart pathfinding from SpidertronEnhancements
           for _, spidertron in ipairs(find_spidertrons(player)[group_name]) do
             if spidertron.follow_target then
             spidertron.follow_target = nil
@@ -216,6 +226,8 @@ end
 local function on_surface_changed(event)
   local player = get_event_player(event)
   if player.opened then player.opened = nil end
+  local stale_gui = player.gui.screen.spidertron_manager_gui
+  if stale_gui and stale_gui.valid then stale_gui.destroy() end
   if set_shortcut_availability(event) and storage.window_is_opened
   then
     open_spidertron_gui(player)
@@ -224,7 +236,8 @@ end
 
 local function init_storage()
   storage = storage or {}
-  storage.spidertron_manager_data = storage.spidertron_manager_data or { home_position = {} }
+  storage.spidertron_manager_data = storage.spidertron_manager_data or {}
+  storage.spidertron_manager_data.home_position = storage.spidertron_manager_data.home_position or {}
   storage.window_position = storage.window_position or nil
 end
 

@@ -1,4 +1,16 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.4.8
+Date: 09. 08. 2026
+  Features:
+    - Integrated SpidertronEnhancements pathfinding for 'Call to me'
+    - Added a new custom sprite instead of the default shortcut icon.
+    - Reordered button creation in `control.lua` for better visual consistency.
+  Bugfixes:
+    - 'Show a group' button now works
+    - Prevent duplicate or stale GUI windows on surface change
+  Changes:
+    - Updated to Factorio 2.1. No code changes were required.
+---------------------------------------------------------------------------------------------------
 Version: 0.4.1
 Date: 26. 01. 2025
   Bugfixes:
@@ -23,7 +35,6 @@ Date: 25. 01. 2025
     - Faster determination of whether there are spidertrones on the surface
   Info:
     - The button does not always become inaccessible when there are no spidertrons on the surface. I am aware of the following cases: after loading, the player is on the surface without spidertrons; the last spidertron was mined by the player
-
 ---------------------------------------------------------------------------------------------------
 Version: 0.2.0
 Date: 24. 01. 2025
