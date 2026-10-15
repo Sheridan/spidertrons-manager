@@ -1,4 +1,15 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.4.2
+Date: 15. 10. 2025
+  Major Features:
+    - Compatible with Factorio 2.1
+    - I tried to do a pathfinding (shift+click), but it's not working well so far :(
+  Minor Features:
+    - "Give remote" sprite changed
+    - "Follow me" sprite changed
+  Bugfixes:
+    - Fix open view
+---------------------------------------------------------------------------------------------------
 Version: 0.4.1
 Date: 26. 01. 2025
   Bugfixes:
