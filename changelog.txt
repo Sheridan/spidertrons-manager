@@ -1,10 +1,20 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.4.3
+Date: 16. 10. 2025
+  Major Features:
+    - Spidertron manager window no longer closes when the map is opened.
+    - Another way to work with internal storage data.
+    - Now, when returning to their home area, Spidertrons will be distributed within the area selected as their home area.
+    - [!] Spidertrons' home positions have been reset. Нou will need to reassign them.
+  Graphics:
+    - "Go to home" sprite changed
+---------------------------------------------------------------------------------------------------
 Version: 0.4.2
 Date: 15. 10. 2025
   Major Features:
     - Compatible with Factorio 2.1
     - I tried to do a pathfinding (shift+click), but it's not working well so far :(
-  Minor Features:
+  Graphics:
     - "Give remote" sprite changed
     - "Follow me" sprite changed
   Bugfixes:
