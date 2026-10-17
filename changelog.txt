@@ -1,11 +1,16 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.4.5
+Date: 18. 10. 2026
+  Gui:
+    - The UI now properly reflects the creation and destruction of spidertrons.
+---------------------------------------------------------------------------------------------------
 Version: 0.4.4
-Date: 17. 10. 2025
+Date: 17. 10. 2026
   Major Features:
     - Better path finding
 ---------------------------------------------------------------------------------------------------
 Version: 0.4.3
-Date: 16. 10. 2025
+Date: 16. 10. 2026
   Major Features:
     - Spidertron manager window no longer closes when the map is opened.
     - Another way to work with internal storage data.
@@ -15,7 +20,7 @@ Date: 16. 10. 2025
     - "Go to home" sprite changed
 ---------------------------------------------------------------------------------------------------
 Version: 0.4.2
-Date: 15. 10. 2025
+Date: 15. 10. 2026
   Major Features:
     - Compatible with Factorio 2.1
     - I tried to do a pathfinding (shift+click), but it's not working well so far :(
