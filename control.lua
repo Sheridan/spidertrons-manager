@@ -48,14 +48,25 @@ local function find_spidertrons(player)
 end
 
 local function request_spidertron_path(spidertron, goal_position)
-  local surface = spidertron.surface
+if not spidertron or not spidertron.valid then return end
 
-  local mask = {}
-  for layer, enabled in pairs(spidertron.prototype.collision_mask) do
-    mask[layer] = enabled
+  local surface = spidertron.surface
+  local MAX_GAP = 3
+  local original_mask = spidertron.prototype.collision_mask
+
+  local mask = {
+    layers = {},
+    not_colliding_with_itself = original_mask and original_mask.not_colliding_with_itself or false
+  }
+
+  if original_mask and original_mask.layers then
+    for layer, val in pairs(original_mask.layers) do
+      mask.layers[layer] = val
+    end
   end
-  mask["water_tile"] = true
-  mask["lava_tile"] = true
+
+  mask.layers["water_tile"] = true
+  mask.layers["lava_tile"] = true
 
   local path_id = surface.request_path{
     bounding_box = spidertron.prototype.collision_box,
@@ -65,14 +76,19 @@ local function request_spidertron_path(spidertron, goal_position)
     force = spidertron.force,
     radius = 4,
     entity_to_ignore = spidertron,
+    max_gap_size = MAX_GAP,
+    max_attack_distance = MAX_GAP,
     pathfind_flags = {
+        cache = true,
         prefer_straight_paths = false,
         allow_paths_through_own_entities = true
     }
   }
 
+  if not path_id then return end
+
   local path_data = {
-    spidertron = spidertron,
+    spidertron_unit = spidertron.unit_number,
     goal = goal_position
   }
 
@@ -396,7 +412,7 @@ local function register_event_handlers()
     if not req then return end
     player_storage.rm_group_data(nil, "path_requests", event.id)
 
-    local spidertron = req.spidertron
+    local spidertron = game.get_entity_by_unit_number(req.spidertron_unit)
     if not spidertron.valid then return end
     if event.try_again_later then
       spidertron.autopilot_destination = req.goal
