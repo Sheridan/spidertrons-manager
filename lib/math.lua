@@ -49,3 +49,12 @@ function calculate_grid_positions(area, count)
 
   return positions
 end
+
+function entity_bigger_than_area(area, collision_box)
+  local area_width = area.right_bottom.x - area.left_top.x
+  local area_height = area.right_bottom.y - area.left_top.y
+  local collision_box_width = collision_box.right_bottom.x - collision_box.left_top.x
+  local collision_box_height = collision_box.right_bottom.y - collision_box.left_top.y
+  local is_point = area_width < collision_box_width or area_height < collision_box_height
+  return not is_point
+end

@@ -170,8 +170,9 @@ local function open_spidertron_gui(player, spidertron_id_for_ignore)
         if player.character and player.character.valid and player.surface == player.character.surface then
             add_sprite_button(button_flow, group_name .. "_sm_follow_button", {"sm_gui.follow_me_tooltip"}, "slot_button", "spidertron_follow", button_tags)
         end
+        add_sprite_button(button_flow, group_name .. "_sm_go_location_button", {"sm_gui.go_location_tooltip"}, "slot_button", "spidertron_go_to_location", button_tags)
+        add_sprite_button(button_flow, group_name .. "_sm_go_home_button"    , {"sm_gui.go_home_tooltip"}    , "slot_button", "spidertron_go_to_home"    , button_tags)
         add_sprite_button(button_flow, group_name .. "_sm_give_remote_button", {"sm_gui.give_remote_tooltip"}, "slot_button", "another_spidertron_remote", button_tags)
-        add_sprite_button(button_flow, group_name .. "_sm_go_home_button"    , {"sm_gui.go_home_tooltip"}    , "slot_button", "spidertron_go_to_location", button_tags)
         add_sprite_button(button_flow, group_name .. "_sm_view_button"       , {"sm_gui.view_tooltip"}       , "slot_button", "open_spidertron_view"     , button_tags)
         add_sprite_button(button_flow, group_name .. "_sm_settings_button"   , {"sm_gui.settings_tooltip"}   , "slot_button", "open_spidertron_settings" , button_tags)
       end
@@ -268,6 +269,19 @@ local function on_button_click_go_home(event)
   end
 end
 
+local function on_button_click_go_location(event)
+  local player = get_event_player(event)
+  if not player then return end
+  local group_name = event.element.tags.group_name
+  if player.is_cursor_empty() then
+    player_storage.save_player_data(player, "selection_target_group", group_name)
+    player_storage.save_player_data(player, "pathfinding", event.shift)
+    local cursor = player.cursor_stack
+    cursor.set_stack({name="spidertrons-manager-set-location-tool"})
+    close_spidertron_gui(player)
+  end
+end
+
 local function on_button_click_view(event)
   local player = get_event_player(event)
   if player then
@@ -303,20 +317,49 @@ local function on_home_area_selected(event)
 
   local spidertrons = find_spidertrons(player)[target_group]
   if spidertrons and #spidertrons > 0 and spidertrons[1] and spidertrons[1].valid then
-    local collision_box = spidertrons[1].prototype.collision_box
-    local area_width = event.area.right_bottom.x - event.area.left_top.x
-    local area_height = event.area.right_bottom.y - event.area.left_top.y
-    local spidertron_width = collision_box.right_bottom.x - collision_box.left_top.x
-    local spidertron_height = collision_box.right_bottom.y - collision_box.left_top.y
-    -- local home_data
-    if area_width < spidertron_width or area_height < spidertron_height then
-      store_home(player, target_group, event.area, true)
-    else
+    if entity_bigger_than_area(event.area, spidertrons[1].prototype.collision_box) then
       store_home(player, target_group, event.area, false)
+    else
+      store_home(player, target_group, event.area, true)
     end
   else
     store_home(player, target_group, event.area, true)
   end
+  player_storage.rm_group_data(player, "selection_target_group")
+  open_spidertron_gui(player)
+  player.cursor_stack.clear()
+end
+
+local function on_location_area_selected(event)
+  local player = get_event_player(event)
+  if not player then return end
+  local target_group = player_storage.load_player_data(player, "selection_target_group", nil)
+  if not target_group then return end
+
+  local spidertrons = find_spidertrons(player)[target_group]
+  if not spidertrons or #spidertrons == 0 then return end
+
+  local use_pathfinding = player_storage.load_player_data(player, "pathfinding", false)
+  local positions = {}
+  local is_area = entity_bigger_than_area(event.area, spidertrons[1].prototype.collision_box)
+  if is_area then
+    positions = calculate_grid_positions(event.area, #spidertrons)
+  else
+    local target_pos = event.position or get_area_center(event.area)
+    for _ = 1, #spidertrons do
+      table.insert(positions, target_pos)
+    end
+  end
+  for i, spidertron in ipairs(spidertrons) do
+    if spidertron.valid and positions[i] then
+      if use_pathfinding then
+        request_spidertron_path(spidertron, positions[i])
+      else
+        spidertron.autopilot_destination = positions[i]
+      end
+    end
+  end
+  player_storage.rm_group_data(player, "selection_target_group")
   open_spidertron_gui(player)
   player.cursor_stack.clear()
 end
@@ -360,11 +403,12 @@ local function handle_gui_click(event)
   local player = get_event_player(event)
   if not player then return end
 
-  if event.element.name:endswith("sm_follow_button")      then on_button_click_followme(event); return end
+  if event.element.name:endswith("sm_follow_button")      then on_button_click_followme(event)   ; return end
   if event.element.name:endswith("sm_give_remote_button") then on_button_click_give_remote(event); return end
-  if event.element.name:endswith("sm_go_home_button")     then on_button_click_go_home(event); return end
-  if event.element.name:endswith("sm_settings_button")    then on_button_click_settings(event); return end
-  if event.element.name:endswith("sm_view_button")        then on_button_click_view(event); return end
+  if event.element.name:endswith("sm_go_home_button")     then on_button_click_go_home(event)    ; return end
+  if event.element.name:endswith("sm_go_location_button") then on_button_click_go_location(event); return end
+  if event.element.name:endswith("sm_settings_button")    then on_button_click_settings(event)   ; return end
+  if event.element.name:endswith("sm_view_button")        then on_button_click_view(event)       ; return end
 end
 
 local function handle_script_path_request_finished(event)
@@ -441,8 +485,8 @@ local function handle_gui_closed(event)
 end
 
 local function handle_player_selected_area(event)
-  if event.item ~= "spidertrons-manager-set-home-tool" then return end
-  on_home_area_selected(event)
+  if event.item == "spidertrons-manager-set-home-tool"     then on_home_area_selected(event)     end
+  if event.item == "spidertrons-manager-set-location-tool" then on_location_area_selected(event) end
 end
 
 local function handle_custom_shortcut(event)
@@ -455,6 +499,18 @@ local function handle_entity_renamed(event)
   and event.entity.type == "spider-vehicle"
   then
     update_interface(event)
+  end
+end
+
+local function handle_player_cursor_stack_changed(event)
+  local player = game.get_player(event.player_index)
+  if not player then return end
+  if not player.cursor_stack.valid_for_read then
+    local target_group = player_storage.load_player_data(player, "selection_target_group", nil)
+    if target_group then
+      player_storage.rm_player_data(player, "selection_target_group")
+      open_spidertron_gui(player)
+    end
   end
 end
 
@@ -487,6 +543,8 @@ local function register_event_handlers()
   script.on_event(defines.events.on_built_entity          , update_interface, spider_event_filter)
   script.on_event(defines.events.on_robot_built_entity    , update_interface, spider_event_filter)
   script.on_event(defines.events.on_entity_renamed        , handle_entity_renamed)
+
+  script.on_event(defines.events.on_player_cursor_stack_changed, handle_player_cursor_stack_changed)
 end
 
 local function configuration_changed()

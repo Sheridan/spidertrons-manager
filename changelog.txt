@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.4.6
+Date: 19. 10. 2026
+  Major Features:
+    - New button: go to location. shift+click: with path finding. If selected area as location - spidertrons will be distributed within the area
+  Minor Features:
+    - Return window back if the player has declined to select area (home or location)
+---------------------------------------------------------------------------------------------------
 Version: 0.4.5
 Date: 18. 10. 2026
   Gui:
