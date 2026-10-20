@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.4.7
+Date: 20. 10. 2026
+  Minor Features:
+    - Improved spidertron pathfinding. They can now traverse water and lava obstacles, just like manually controlled spidertrons.
+---------------------------------------------------------------------------------------------------
 Version: 0.4.6
 Date: 19. 10. 2026
   Major Features:

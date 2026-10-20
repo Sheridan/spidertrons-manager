@@ -62,7 +62,7 @@ end
 local function request_spidertron_path(spidertron, goal_position)
   if not spidertron or not spidertron.valid then return end
   local surface = spidertron.surface
-  local MAX_GAP = 3
+  local MAX_GAP = 10
   local original_mask = spidertron.prototype.collision_mask
   local mask = {
     layers = {},
