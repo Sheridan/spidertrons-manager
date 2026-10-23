@@ -4,5 +4,8 @@
   "title": "Spidertrons Manager",
   "author": "Sheridan",
   "factorio_version": "2.1",
-  "description": "Manage all your spidertrons from a single window. Group them by name, command them to follow you, return home, or navigate to specific locations with pathfinding."
+  "description": "Manage all your spidertrons from a single window. Group them by name, command them to follow you, return home, or navigate to specific locations with pathfinding.",
+  "dependencies": [
+    "(?) SpidertronEnhancements"
+  ]
 }

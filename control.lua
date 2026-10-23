@@ -205,7 +205,14 @@ local function on_button_click_followme(event)
     for _, spidertron in ipairs(spidertrons) do
       if spidertron.valid then
         if event.control then
-          spidertron.autopilot_destination = player.character.position
+          -- Use smart pathfinding from SpidertronEnhancements if installed
+          if remote.interfaces["SpidertronEnhancementsInternal-pf"] and remote.interfaces["SpidertronEnhancementsInternal-pf"]["use-remote"] then
+            spidertron.follow_target = nil
+            spidertron.autopilot_destination = nil
+            remote.call("SpidertronEnhancementsInternal-pf", "use-remote", spidertron, player.character.position)
+          else
+            spidertron.autopilot_destination = player.character.position
+          end
         elseif event.shift then
           request_spidertron_path(spidertron, player.character.position)
           local follows_data = {
@@ -255,6 +262,26 @@ local function on_button_click_go_home(event)
       local target_pos = home_data.position or home_data
       for _ = 1, #spidertrons do
         table.insert(positions, target_pos)
+      end
+    else -- go home
+      local home_position = storage.spidertron_manager_data.home_position[group_name]
+      if home_position then
+        -- Use smart pathfinding from SpidertronEnhancements if installed
+        if remote.interfaces["SpidertronEnhancementsInternal-pf"] and remote.interfaces["SpidertronEnhancementsInternal-pf"]["use-remote"] then
+          for _, sp in ipairs(find_spidertrons(player)[group_name]) do
+            if sp.valid then
+              sp.follow_target = nil
+              sp.autopilot_destination = nil
+              remote.call("SpidertronEnhancementsInternal-pf", "use-remote", sp, home_position)
+            end
+          end
+        else
+          for _, sp in ipairs(find_spidertrons(player)[group_name]) do
+            if sp.valid then
+              sp.autopilot_destination = home_position
+            end
+          end
+        end
       end
     end
     for i, spidertron in ipairs(spidertrons) do
@@ -401,8 +428,13 @@ end
 
 local function handle_gui_click(event)
   local player = get_event_player(event)
-  if not player then return end
 
+  local stale_gui = player.gui.screen[GUI_NAME]
+  if stale_gui and stale_gui.valid then stale_gui.destroy() end
+  if player.opened then player.opened = nil end
+  local stale_gui = player.gui.screen.spidertron_manager_gui
+  if stale_gui and stale_gui.valid then stale_gui.destroy() end
+  if set_shortcut_availability(event) and storage.window_is_opened
   if event.element.name:endswith("sm_follow_button")      then on_button_click_followme(event)   ; return end
   if event.element.name:endswith("sm_give_remote_button") then on_button_click_give_remote(event); return end
   if event.element.name:endswith("sm_go_home_button")     then on_button_click_go_home(event)    ; return end
@@ -478,6 +510,7 @@ local function handle_gui_closed(event)
       and source_spidertron
       and source_spidertron.unit_number == event.entity.unit_number
       and event.gui_type ~= defines.gui_type.opened_entity_grid
+
   then
     apply_settings_to_group(player)
     open_spidertron_gui(player)
@@ -518,7 +551,10 @@ end
 -- Initialization & Registration
 -- ==========================================
 local function init_storage()
-    storage = storage or {}
+  storage = storage or {}
+  storage.spidertron_manager_data = storage.spidertron_manager_data or {}
+  storage.spidertron_manager_data.home_position = storage.spidertron_manager_data.home_position or {}
+  storage.window_position = storage.window_position or nil
 end
 
 local function register_event_handlers()

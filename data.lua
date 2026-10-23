@@ -56,10 +56,11 @@ data:extend({
     name = "open_spidertron_gui_shortcut",
     key_sequence = "U"
   },
-  { type = "sprite", name = "open_spidertron_settings" , filename = "__spidertrons-manager__/graphics/icons/open_spidertron_settings-64.png", width = 64, height = 64, flags = {"gui-icon"}, scale = 0.5 },
-  { type = "sprite", name = "open_spidertron_view"     , filename = "__spidertrons-manager__/graphics/icons/eye-64.png",                      width = 64, height = 64, flags = {"gui-icon"}, scale = 0.5 },
-  { type = "sprite", name = "another_spidertron_remote", filename = "__spidertrons-manager__/graphics/icons/remote-64.png",                   width = 64, height = 64, flags = {"gui-icon"}, scale = 0.5 },
-  { type = "sprite", name = "spidertron_follow"        , filename = "__spidertrons-manager__/graphics/icons/follow-64.png",                   width = 64, height = 64, flags = {"gui-icon"}, scale = 0.5 },
-  { type = "sprite", name = "spidertron_go_to_home"    , filename = "__spidertrons-manager__/graphics/icons/home-64.png",                     width = 64, height = 64, flags = {"gui-icon"}, scale = 0.5 },
-  { type = "sprite", name = "spidertron_go_to_location", filename = "__spidertrons-manager__/graphics/icons/to_location-64.png",              width = 64, height = 64, flags = {"gui-icon"}, scale = 0.5 }
+  { type = "sprite", name = "give_spidertron_remote", filename = "__spidertrons-manager__/graphics/icons/give_spidertron_remote-64.png", width = 64, height = 64, flags = { "gui-icon" }, scale = 0.5 },
+  { type = "sprite", name = "open_spidertron_settings", filename = "__spidertrons-manager__/graphics/icons/open_spidertron_settings-64.png", width = 64, height = 64, flags = { "gui-icon" }, scale = 0.5 },
+  { type = "sprite", name = "open_spidertron_view", filename = "__spidertrons-manager__/graphics/icons/eye-64.png", width = 64, height = 64, flags = { "gui-icon" }, scale = 0.5 },
+  { type = "sprite", name = "another_spidertron_remote", filename = "__spidertrons-manager__/graphics/icons/remote-64.png", width = 64, height = 64, flags = { "gui-icon" }, scale = 0.5 },
+  { type = "sprite", name = "spidertron_follow", filename = "__spidertrons-manager__/graphics/icons/follow-64.png", width = 64, height = 64, flags = { "gui-icon" }, scale = 0.5 },
+  { type = "sprite", name = "spidertron_go_to_home", filename = "__spidertrons-manager__/graphics/icons/home-64.png", width = 64, height = 64, flags = { "gui-icon" }, scale = 0.5 },
+  { type = "sprite", name = "spidertron_go_to_location", filename = "__spidertrons-manager__/graphics/icons/to_location-64.png", width = 64, height = 64, flags = { "gui-icon" }, scale = 0.5 }
 })
