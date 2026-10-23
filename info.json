@@ -4,8 +4,8 @@
   "title": "Spidertrons Manager",
   "author": "Sheridan",
   "factorio_version": "2.1",
-  "description": "A mod for managing Spidertrons. Allows you to group them together and control the groups, such as following the player, returning home, and more.",
-    "dependencies": [
-      "(?) SpidertronEnhancements"
-    ]
+  "description": "Manage all your spidertrons from a single window. Group them by name, command them to follow you, return home, or navigate to specific locations with pathfinding.",
+  "dependencies": [
+    "(?) SpidertronEnhancements"
+  ]
 }

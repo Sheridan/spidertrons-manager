@@ -1,121 +1,228 @@
 require("lib.gui")
+require("lib.math")
 require("lib.string_util")
+local player_storage = require("lib.player_storage")
 
-local function area_center(box)
-  local left_top = box.left_top
-  local right_bottom = box.right_bottom
+local SHORTCUT_NAME = "open_spidertron_gui_shortcut"
+local GUI_NAME = "spidertron_manager_gui"
 
-  local center_x = (left_top.x + right_bottom.x) / 2
-  local center_y = (left_top.y + right_bottom.y) / 2
-
-  return {x = center_x, y = center_y}
-end
-
-local function spidertron_name(spidertron)
-  if spidertron.entity_label then return spidertron.entity_label end
-  -- if spidertron.prototype.localised_name then return spidertron.prototype.localised_name end
-  return spidertron.name
-end
-
-local function is_spidertrons_exists(player)
-  return player.surface.count_entities_filtered{type = "spider-vehicle", to_be_deconstructed = false, force = player.force} > 0
-end
-
-local function find_spidertrons(player)
-  local spidertrons_groups = {}
-  local surface_spidertrons = player.surface.find_entities_filtered{type = "spider-vehicle", to_be_deconstructed = false, force = player.force}
-  table.sort(surface_spidertrons, function(a,b) return spidertron_name(a) < spidertron_name(b) end)
-  for _, spidertron in pairs(surface_spidertrons)
-  do
-    if spidertron.valid
-    then
-      -- if spidertron.commandable then game.print("!") end
-      local group_name = player.surface.name .. "_" .. spidertron_name(spidertron)
-      if not spidertrons_groups[group_name]
-      then
-          spidertrons_groups[group_name] = {}
-      end
-      table.insert(spidertrons_groups[group_name], spidertron)
-    end
-  end
-  return spidertrons_groups
-end
-
-local function open_spidertron_gui(player)
-  if player.opened then return end
-  local gui = add_window(player, "spidertron_manager_gui", {"sm_gui.window_caption"})
-
-  local sp_table = gui.add{
-    type = "table",
-    name = "sp_table",
-    style = "sync_mods_table",
-    column_count = 4,
-    vertical_centering = true
-  }
-
-  for group_name, spidertrons in pairs(find_spidertrons(player))
-  do
-      local sp_leader = spidertrons[1]
-      local button_tags = { group_name = group_name }
-      sp_table.add{ type = "label", caption = "◼" }.style.font_color = sp_leader.color
-      sp_table.add{ type = "label", caption = spidertron_name(sp_leader) }
-      sp_table.add{ type = "label", caption = #spidertrons }
-      local button_flow = sp_table.add{ type = "flow", direction = "horizontal" }
-      if player.character and player.character.surface and player.surface == player.character.surface
-      then
-        add_sprite_button(button_flow, group_name .. "_sm_follow_button", {"sm_gui.follow_me_tooltip"}, "slot_button", "utility/player_force_icon", button_tags)
-      end
-      add_sprite_button(button_flow, group_name .. "_sm_view_button"       , {"sm_gui.view_tooltip"}       , "slot_button", "open_spidertron_view"           , button_tags)
-      add_sprite_button(button_flow, group_name .. "_sm_give_remote_button", {"sm_gui.give_remote_tooltip"}, "slot_button", "give_spidertron_remote"         , button_tags)
-      add_sprite_button(button_flow, group_name .. "_sm_go_home_button"    , {"sm_gui.go_home_tooltip"}    , "slot_button", "utility/shoot_cursor_green"     , button_tags)
-      add_sprite_button(button_flow, group_name .. "_sm_settings_button"   , {"sm_gui.settings_tooltip"}   , "slot_button", "open_spidertron_settings"       , button_tags)
-  end
-  storage.window_is_opened = true
-end
-
-local function apply_settings_to_group(player)
-  local spidertrons = find_spidertrons(player)[storage.spidertron_manager_data.selection_target_group]
-  if spidertrons and #spidertrons > 1
-    then
-      local src_spidertron = storage.spidertron_manager_data.settings_source_spidertron
-      for _, spidertron in ipairs(spidertrons)
-      do
-        spidertron.copy_settings(src_spidertron, player)
-      end
-  end
-  storage.spidertron_manager_data.selection_target_group = nil
-  storage.spidertron_manager_data.settings_source_spidertron = nil
-  open_spidertron_gui(player)
-end
-
+-- ==========================================
+-- Player helpers
+-- ==========================================
 local function get_event_player(event)
   if event.player_index then return game.get_player(event.player_index) end
   if event.entity and event.entity.last_user then return event.entity.last_user end
   return nil
 end
 
+-- ==========================================
+-- Spidertons helpers
+-- ==========================================
+local function spidertron_name(spidertron)
+  if spidertron.entity_label then return spidertron.entity_label end
+  return spidertron.name
+end
+
+local function spidertrons_exists_on_surface(player)
+  local spidertrons = player.surface.find_entities_filtered{
+    type = "spider-vehicle",
+    force = player.force,
+    limit = 1,
+  }
+  return #spidertrons > 0
+end
+
+local function find_spidertrons(player, spidertron_id_for_ignore)
+  local spidertrons_groups = {}
+  local surface_spidertrons = player.surface.find_entities_filtered{type = "spider-vehicle", to_be_deconstruct = false, force = player.force}
+  table.sort(surface_spidertrons, function(a,b) return spidertron_name(a) < spidertron_name(b) end)
+  for _, spidertron in pairs(surface_spidertrons) do
+    if spidertron.valid then
+      if spidertron_id_for_ignore == nil or spidertron.unit_number ~= spidertron_id_for_ignore then
+        local group_name = player.surface.name .. "_" .. spidertron_name(spidertron)
+        if not spidertrons_groups[group_name] then
+          spidertrons_groups[group_name] = {}
+        end
+        table.insert(spidertrons_groups[group_name], spidertron)
+        -- game.print("Found unit: " .. spidertron.unit_number)
+      end
+    end
+  end
+  return spidertrons_groups
+end
+
+local function spidertrons_groups_count(spidertrons_groups)
+  local groups_count = 0
+  for _ in pairs(spidertrons_groups) do
+    groups_count = groups_count + 1
+  end
+  return groups_count
+end
+
+local function request_spidertron_path(spidertron, goal_position)
+  if not spidertron or not spidertron.valid then return end
+  local surface = spidertron.surface
+  local MAX_GAP = 10
+  local original_mask = spidertron.prototype.collision_mask
+  local mask = {
+    layers = {},
+    not_colliding_with_itself = original_mask and original_mask.not_colliding_with_itself or false
+  }
+  if original_mask and original_mask.layers then
+    for layer, val in pairs(original_mask.layers) do
+      mask.layers[layer] = val
+    end
+  end
+  mask.layers["water_tile"] = true
+  mask.layers["lava_tile"] = true
+
+  local path_id = surface.request_path{
+    bounding_box = spidertron.prototype.collision_box,
+    collision_mask = mask,
+    start = spidertron.position,
+    goal = goal_position,
+    force = spidertron.force,
+    radius = 4,
+    entity_to_ignore = spidertron,
+    max_gap_size = MAX_GAP,
+    max_attack_distance = MAX_GAP,
+    pathfind_flags = {
+      cache = false,
+      prefer_straight_paths = false,
+      allow_paths_through_own_entities = true
+    }
+  }
+  if not path_id then return end
+
+  local path_data = {
+    spidertron_unit = spidertron.unit_number,
+    goal = goal_position
+  }
+  player_storage.save_group_data(nil, "path_requests", path_id, path_data)
+end
+
+local function store_home(player, target_group, area, as_point)
+  local home_data
+  if as_point then
+    home_data = {
+      type = "point",
+      position = get_area_center(area)
+    }
+  else
+    home_data = {
+      type = "area",
+      area = area
+    }
+  end
+  player_storage.save_group_data(player, "home_data", target_group, home_data)
+  player_storage.rm_player_data(player, "selection_target_group")
+end
+
+local function apply_settings_to_group(player)
+  local spidertrons = find_spidertrons(player)[player_storage.load_player_data(player, "selection_target_group", nil)]
+  if not spidertrons then return end
+  if #spidertrons > 1 then
+    local src_spidertron = player_storage.load_player_data(player, "settings_source_spidertron", nil)
+    if src_spidertron then
+      for _, spidertron in ipairs(spidertrons) do
+        spidertron.copy_settings(src_spidertron, player)
+      end
+    end
+  end
+  player_storage.rm_player_data(player, "selection_target_group")
+  player_storage.rm_player_data(player, "settings_source_spidertron")
+end
+
+-- ==========================================
+-- GUI
+-- ==========================================
+local function set_shortcut_state(player, is_toggled)
+  player.set_shortcut_toggled(SHORTCUT_NAME, is_toggled)
+  player_storage.save_player_data(player, "window_is_opened", is_toggled)
+end
+
+local function spidertron_gui_opened(player)
+  return player.gui.screen.spidertron_manager_gui ~= nil
+end
+
+local function open_spidertron_gui(player, spidertron_id_for_ignore)
+  if not player.gui.screen[GUI_NAME] then
+    if spidertron_gui_opened(player) then return end
+    local found_spidertrons_groups = find_spidertrons(player, spidertron_id_for_ignore)
+    local groups_count = spidertrons_groups_count(found_spidertrons_groups)
+    if groups_count > 0 then
+      local gui = add_window(player_storage, player, GUI_NAME, {"sm_gui.window_caption"})
+      local sp_table = gui.add{
+          type = "table",
+          name = "sp_table",
+          style = "sync_mods_table",
+          column_count = 4,
+          vertical_centering = true
+      }
+      for group_name, spidertrons in pairs(found_spidertrons_groups) do
+        local sp_leader = spidertrons[1]
+        local button_tags = { group_name = group_name }
+        sp_table.add{ type = "label", caption = "◼ " }.style.font_color = sp_leader.color
+        sp_table.add{ type = "label", caption = spidertron_name(sp_leader) }
+        sp_table.add{ type = "label", caption = #spidertrons }
+
+        local button_flow = sp_table.add{ type = "flow", direction = "horizontal" }
+        if player.character and player.character.valid and player.surface == player.character.surface then
+            add_sprite_button(button_flow, group_name .. "_sm_follow_button", {"sm_gui.follow_me_tooltip"}, "slot_button", "spidertron_follow", button_tags)
+        end
+        add_sprite_button(button_flow, group_name .. "_sm_go_location_button", {"sm_gui.go_location_tooltip"}, "slot_button", "spidertron_go_to_location", button_tags)
+        add_sprite_button(button_flow, group_name .. "_sm_go_home_button"    , {"sm_gui.go_home_tooltip"}    , "slot_button", "spidertron_go_to_home"    , button_tags)
+        add_sprite_button(button_flow, group_name .. "_sm_give_remote_button", {"sm_gui.give_remote_tooltip"}, "slot_button", "another_spidertron_remote", button_tags)
+        add_sprite_button(button_flow, group_name .. "_sm_view_button"       , {"sm_gui.view_tooltip"}       , "slot_button", "open_spidertron_view"     , button_tags)
+        add_sprite_button(button_flow, group_name .. "_sm_settings_button"   , {"sm_gui.settings_tooltip"}   , "slot_button", "open_spidertron_settings" , button_tags)
+      end
+      player_storage.save_player_data(player, "window_is_opened", true)
+      set_shortcut_state(player, true)
+    else
+      set_shortcut_state(player, false)
+    end
+  end
+end
+
+local function close_spidertron_gui(player)
+  local gui = player.gui.screen[GUI_NAME]
+  if gui then
+    player_storage.save_player_data(player, "window_position", gui.location)
+    gui.destroy()
+  end
+  set_shortcut_state(player, false)
+end
+
+-- ==========================================
+-- Button click handlers
+-- ==========================================
 local function on_button_click_followme(event)
   local player = get_event_player(event)
-  if player
-  then
-    for _, spidertron in ipairs(find_spidertrons(player)[event.element.tags.group_name])
-    do
-      if event.control
-      then
-        -- Use smart pathfinding from SpidertronEnhancements if installed and has the pathfinding interface
-        if remote.interfaces["SpidertronEnhancementsInternal-pf"] and remote.interfaces["SpidertronEnhancementsInternal-pf"]["use-remote"] then
-          if spidertron.follow_target then
+  if player and player.character then
+    local group_name = event.element.tags.group_name
+    local spidertrons = find_spidertrons(player)[group_name]
+    if not spidertrons then return end
+    for _, spidertron in ipairs(spidertrons) do
+      if spidertron.valid then
+        if event.control then
+          -- Use smart pathfinding from SpidertronEnhancements if installed
+          if remote.interfaces["SpidertronEnhancementsInternal-pf"] and remote.interfaces["SpidertronEnhancementsInternal-pf"]["use-remote"] then
             spidertron.follow_target = nil
+            spidertron.autopilot_destination = nil
+            remote.call("SpidertronEnhancementsInternal-pf", "use-remote", spidertron, player.character.position)
+          else
+            spidertron.autopilot_destination = player.character.position
           end
-
-          spidertron.autopilot_destination = nil
-          remote.call("SpidertronEnhancementsInternal-pf", "use-remote", spidertron, player.character.position)
+        elseif event.shift then
+          request_spidertron_path(spidertron, player.character.position)
+          local follows_data = {
+            player_index = player.index,
+            goal = player.character.position
+          }
+          player_storage.save_group_data(nil, "pending_follows", spidertron.unit_number, follows_data)
         else
-          -- Fall back to vanilla pathfinding
-          spidertron.autopilot_destination = player.character.position
+          spidertron.follow_target = player.character
         end
-      else
-        spidertron.follow_target = player.character
       end
     end
   end
@@ -123,8 +230,7 @@ end
 
 local function on_button_click_give_remote(event)
   local player = get_event_player(event)
-  if player and player.is_cursor_empty()
-  then
+  if player and player.is_cursor_empty() then
     local cursor = player.cursor_stack
     cursor.set_stack({name="spidertron-remote"})
     player.spidertron_remote_selection = find_spidertrons(player)[event.element.tags.group_name]
@@ -133,107 +239,317 @@ end
 
 local function on_button_click_go_home(event)
   local player = get_event_player(event)
-  if player
-  then
-    local group_name = event.element.tags.group_name
-    if event.control
-    then -- set home
-      if player.is_cursor_empty()
-      then
-        storage.spidertron_manager_data.selection_target_group = group_name
-        local cursor = player.cursor_stack
-        cursor.set_stack({name="spidertrons-manager-set-home-tool"})
-        player.opened = nil
+  if not player then return end
+  local group_name = event.element.tags.group_name
+  if event.control then
+    if player.is_cursor_empty() then
+      player_storage.save_player_data(player, "selection_target_group", group_name)
+      local cursor = player.cursor_stack
+      cursor.set_stack({name="spidertrons-manager-set-home-tool"})
+      close_spidertron_gui(player)
+    end
+  else
+    local home_data = player_storage.load_group_data(player, "home_data", group_name, nil)
+    if not home_data then return end
+    local spidertrons = find_spidertrons(player)[group_name]
+    if not spidertrons or #spidertrons == 0 then return end
+
+    local use_pathfinding = event.shift
+    local positions = {}
+    if home_data.type == "area" and home_data.area then
+      positions = calculate_grid_positions(home_data.area, #spidertrons)
+    else
+      local target_pos = home_data.position or home_data
+      for _ = 1, #spidertrons do
+        table.insert(positions, target_pos)
       end
     else -- go home
       local home_position = storage.spidertron_manager_data.home_position[group_name]
       if home_position then
-        -- Use smart pathfinding from SpidertronEnhancements if installed and has the pathfinding interface
+        -- Use smart pathfinding from SpidertronEnhancements if installed
         if remote.interfaces["SpidertronEnhancementsInternal-pf"] and remote.interfaces["SpidertronEnhancementsInternal-pf"]["use-remote"] then
-          for _, spidertron in ipairs(find_spidertrons(player)[group_name]) do
-            if spidertron.follow_target then
-            spidertron.follow_target = nil
-          end
-          
-          -- Clear current destination by setting to nil
-          spidertron.autopilot_destination = nil
-          remote.call("SpidertronEnhancementsInternal-pf", "use-remote", spidertron, home_position)
+          for _, sp in ipairs(find_spidertrons(player)[group_name]) do
+            if sp.valid then
+              sp.follow_target = nil
+              sp.autopilot_destination = nil
+              remote.call("SpidertronEnhancementsInternal-pf", "use-remote", sp, home_position)
+            end
           end
         else
-          -- Fall back to vanilla pathfinding
-          for _, spidertron in ipairs(find_spidertrons(player)[group_name]) do
-            spidertron.autopilot_destination = home_position
+          for _, sp in ipairs(find_spidertrons(player)[group_name]) do
+            if sp.valid then
+              sp.autopilot_destination = home_position
+            end
           end
+        end
+      end
+    end
+    for i, spidertron in ipairs(spidertrons) do
+      if spidertron.valid and positions[i] then
+        if use_pathfinding then
+          request_spidertron_path(spidertron, positions[i])
+        else
+          spidertron.autopilot_destination = positions[i]
         end
       end
     end
   end
 end
 
+local function on_button_click_go_location(event)
+  local player = get_event_player(event)
+  if not player then return end
+  local group_name = event.element.tags.group_name
+  if player.is_cursor_empty() then
+    player_storage.save_player_data(player, "selection_target_group", group_name)
+    player_storage.save_player_data(player, "pathfinding", event.shift)
+    local cursor = player.cursor_stack
+    cursor.set_stack({name="spidertrons-manager-set-location-tool"})
+    close_spidertron_gui(player)
+  end
+end
+
 local function on_button_click_view(event)
   local player = get_event_player(event)
-  if player
-  then
+  if player then
     local spidertron = find_spidertrons(player)[event.element.tags.group_name][1]
-    player.set_controller{
-      type = defines.controllers.remote,
-      position = spidertron.position
-    }
+    if spidertron and spidertron.valid then
+      player.centered_on = spidertron
+    end
   end
 end
 
 local function on_button_click_settings(event)
   local player = get_event_player(event)
-  if player
-  then
+  if player then
     local group_name = event.element.tags.group_name
-    storage.spidertron_manager_data.settings_source_spidertron = find_spidertrons(player)[group_name][1]
+    local source_spidertron = find_spidertrons(player)[group_name][1]
+    player_storage.save_player_data(player, "settings_source_spidertron", source_spidertron)
     player.set_controller{
       type = defines.controllers.remote,
-      position = storage.spidertron_manager_data.settings_source_spidertron.position
+      position = source_spidertron.position,
+      surface = source_spidertron.surface
     }
-    player.opened = storage.spidertron_manager_data.settings_source_spidertron
-    storage.spidertron_manager_data.selection_target_group = group_name
+    close_spidertron_gui(player)
+    player.opened = source_spidertron
+    player_storage.save_player_data(player, "selection_target_group", group_name)
   end
 end
 
 local function on_home_area_selected(event)
-  if storage.spidertron_manager_data.selection_target_group
-  then
-    local player = get_event_player(event)
-    if player
-    then
-      storage.spidertron_manager_data.home_position[storage.spidertron_manager_data.selection_target_group] = area_center(event.area)
-      storage.spidertron_manager_data.selection_target_group = nil
-      open_spidertron_gui(player)
-      player.cursor_stack.clear()
+  local player = get_event_player(event)
+  if not player then return end
+  local target_group = player_storage.load_player_data(player, "selection_target_group", nil)
+  if not target_group then return end
+
+  local spidertrons = find_spidertrons(player)[target_group]
+  if spidertrons and #spidertrons > 0 and spidertrons[1] and spidertrons[1].valid then
+    if entity_bigger_than_area(event.area, spidertrons[1].prototype.collision_box) then
+      store_home(player, target_group, event.area, false)
+    else
+      store_home(player, target_group, event.area, true)
+    end
+  else
+    store_home(player, target_group, event.area, true)
+  end
+  player_storage.rm_group_data(player, "selection_target_group")
+  open_spidertron_gui(player)
+  player.cursor_stack.clear()
+end
+
+local function on_location_area_selected(event)
+  local player = get_event_player(event)
+  if not player then return end
+  local target_group = player_storage.load_player_data(player, "selection_target_group", nil)
+  if not target_group then return end
+
+  local spidertrons = find_spidertrons(player)[target_group]
+  if not spidertrons or #spidertrons == 0 then return end
+
+  local use_pathfinding = player_storage.load_player_data(player, "pathfinding", false)
+  local positions = {}
+  local is_area = entity_bigger_than_area(event.area, spidertrons[1].prototype.collision_box)
+  if is_area then
+    positions = calculate_grid_positions(event.area, #spidertrons)
+  else
+    local target_pos = event.position or get_area_center(event.area)
+    for _ = 1, #spidertrons do
+      table.insert(positions, target_pos)
+    end
+  end
+  for i, spidertron in ipairs(spidertrons) do
+    if spidertron.valid and positions[i] then
+      if use_pathfinding then
+        request_spidertron_path(spidertron, positions[i])
+      else
+        spidertron.autopilot_destination = positions[i]
+      end
+    end
+  end
+  player_storage.rm_group_data(player, "selection_target_group")
+  open_spidertron_gui(player)
+  player.cursor_stack.clear()
+end
+
+local function update_interface(event, spidertron_id_for_ignore)
+  local player = get_event_player(event)
+  local spidertrons_on_surface = spidertrons_exists_on_surface(player)
+  player.set_shortcut_available(SHORTCUT_NAME, spidertrons_on_surface)
+  if spidertrons_on_surface then
+    if spidertron_gui_opened(player) then
+      close_spidertron_gui(player)
+      open_spidertron_gui(player, spidertron_id_for_ignore)
+    end
+  else
+    if spidertron_gui_opened(player) then
+      close_spidertron_gui(player)
     end
   end
 end
 
-local function set_shortcut_availability(event)
-  -- game.print("set_shortcut_availability")
-  local player = get_event_player(event)
-  if player
-  then
-    local is_sp_exists = is_spidertrons_exists(player)
-    player.set_shortcut_available("open_spidertron_gui_shortcut", is_sp_exists)
-    return is_sp_exists
-  end
-  return false
+local function on_surface_changed(event)
+    update_interface(event)
 end
 
-local function on_surface_changed(event)
+-- ==========================================
+-- Event Handlers (Вынесены из регистраторов)
+-- ==========================================
+local function handle_lua_shortcut(event)
+  if event.prototype_name == SHORTCUT_NAME then
+    local player = game.get_player(event.player_index)
+    if not player then return end
+    if player.gui.screen[GUI_NAME] then
+      close_spidertron_gui(player)
+    else
+      open_spidertron_gui(player)
+    end
+  end
+end
+
+local function handle_gui_click(event)
   local player = get_event_player(event)
+
+  local stale_gui = player.gui.screen[GUI_NAME]
+  if stale_gui and stale_gui.valid then stale_gui.destroy() end
   if player.opened then player.opened = nil end
   local stale_gui = player.gui.screen.spidertron_manager_gui
   if stale_gui and stale_gui.valid then stale_gui.destroy() end
   if set_shortcut_availability(event) and storage.window_is_opened
+  if event.element.name:endswith("sm_follow_button")      then on_button_click_followme(event)   ; return end
+  if event.element.name:endswith("sm_give_remote_button") then on_button_click_give_remote(event); return end
+  if event.element.name:endswith("sm_go_home_button")     then on_button_click_go_home(event)    ; return end
+  if event.element.name:endswith("sm_go_location_button") then on_button_click_go_location(event); return end
+  if event.element.name:endswith("sm_settings_button")    then on_button_click_settings(event)   ; return end
+  if event.element.name:endswith("sm_view_button")        then on_button_click_view(event)       ; return end
+end
+
+local function handle_script_path_request_finished(event)
+  local req = player_storage.load_group_data(nil, "path_requests", event.id, nil)
+  if not req then return end
+  player_storage.rm_group_data(nil, "path_requests", event.id)
+
+  local spidertron = game.get_entity_by_unit_number(req.spidertron_unit)
+  if not spidertron or not spidertron.valid then return end
+
+  if event.try_again_later then
+    spidertron.autopilot_destination = req.goal
+    return
+  end
+
+  if event.path and #event.path > 0 then
+    spidertron.autopilot_destination = event.path[1].position
+    for i = 2, #event.path do
+      spidertron.add_autopilot_destination(event.path[i].position)
+    end
+  else
+    spidertron.autopilot_destination = req.goal
+  end
+end
+
+local function handle_spider_command_completed(event)
+  local spidertron = event.vehicle
+  if not spidertron or not spidertron.valid then return end
+
+  local data = player_storage.load_group_data(nil, "pending_follows", spidertron.unit_number, nil)
+  if not data then return end
+
+  local dx = spidertron.position.x - data.goal.x
+  local dy = spidertron.position.y - data.goal.y
+  if (dx * dx + dy * dy) > 25 then return end
+
+  player_storage.rm_group_data(nil, "pending_follows", spidertron.unit_number)
+  local player = game.get_player(data.player_index)
+  if player and player.valid and player.character and player.character.valid then
+    spidertron.follow_target = player.character
+  end
+end
+
+local function handle_spidertron_destroyed(event)
+  local entity = event.entity
+  if entity and entity.valid and entity.type == "spider-vehicle" then
+    if player_storage.exists_group_data(nil, "pending_follows", entity.unit_number) then
+      player_storage.rm_group_data(nil, "pending_follows", entity.unit_number)
+    end
+    update_interface(event, entity.unit_number)
+  end
+end
+
+local function handle_gui_closed(event)
+  local player = game.get_player(event.player_index)
+  if not player then return end
+
+  if event.element and event.element.valid and event.element.name == GUI_NAME then
+    player_storage.save_player_data(player, "window_position", event.element.location)
+    return
+  end
+
+  local source_spidertron = player_storage.load_player_data(player, "settings_source_spidertron", nil)
+  if  event.entity
+      and event.entity.valid
+      and event.entity.type == "spider-vehicle"
+      and source_spidertron
+      and source_spidertron.unit_number == event.entity.unit_number
+      and event.gui_type ~= defines.gui_type.opened_entity_grid
+
   then
+    apply_settings_to_group(player)
     open_spidertron_gui(player)
   end
 end
 
+local function handle_player_selected_area(event)
+  if event.item == "spidertrons-manager-set-home-tool"     then on_home_area_selected(event)     end
+  if event.item == "spidertrons-manager-set-location-tool" then on_location_area_selected(event) end
+end
+
+local function handle_custom_shortcut(event)
+  open_spidertron_gui(get_event_player(event))
+end
+
+local function handle_entity_renamed(event)
+  if event.entity
+  and event.entity.valid
+  and event.entity.type == "spider-vehicle"
+  then
+    update_interface(event)
+  end
+end
+
+local function handle_player_cursor_stack_changed(event)
+  local player = game.get_player(event.player_index)
+  if not player then return end
+  if not player.cursor_stack.valid_for_read then
+    local target_group = player_storage.load_player_data(player, "selection_target_group", nil)
+    if target_group then
+      player_storage.rm_player_data(player, "selection_target_group")
+      open_spidertron_gui(player)
+    end
+  end
+end
+
+-- ==========================================
+-- Initialization & Registration
+-- ==========================================
 local function init_storage()
   storage = storage or {}
   storage.spidertron_manager_data = storage.spidertron_manager_data or {}
@@ -242,95 +558,29 @@ local function init_storage()
 end
 
 local function register_event_handlers()
-  script.on_event(defines.events.on_lua_shortcut,function(event)
-    if event.prototype_name == "open_spidertron_gui_shortcut" then
-      open_spidertron_gui(get_event_player(event))
-    end
-  end)
+  local spider_event_filter = {{filter = "type", type = "spider-vehicle"}}
 
-  script.on_event(defines.events.on_gui_click, function(event)
-    if event.element.name:endswith("sm_follow_button")      then on_button_click_followme(event); return end
-    if event.element.name:endswith("sm_give_remote_button") then on_button_click_give_remote(event); return end
-    if event.element.name:endswith("sm_go_home_button")     then on_button_click_go_home(event); return end
-    if event.element.name:endswith("sm_settings_button")    then on_button_click_settings(event); return end
-    if event.element.name:endswith("sm_view_button")        then on_button_click_view(event); return end
-    if event.element.name:endswith("-x-button")          then
-      event.element.parent.parent.destroy()
-      storage.window_is_opened = false
-      return
-    end
-  end)
+  script.on_event(defines.events.on_lua_shortcut                , handle_lua_shortcut)
+  script.on_event(defines.events.on_gui_click                   , handle_gui_click)
+  script.on_event(defines.events.on_script_path_request_finished, handle_script_path_request_finished)
+  script.on_event(defines.events.on_spider_command_completed    , handle_spider_command_completed)
+  script.on_event(defines.events.on_gui_closed                  , handle_gui_closed)
+  script.on_event(defines.events.on_player_selected_area        , handle_player_selected_area)
+  script.on_event(SHORTCUT_NAME                                 , handle_custom_shortcut)
 
-  -- script.on_event(defines.events.on_gui_opened, function(event)
-  --   game.print(event.name)
-  --   game.print(event.gui_type)
-  --   if event.element and event.element.valid then game.print(event.element.name) end
-  --   if event.equipment and event.equipment.valid then game.print(event.equipment.name) end
-  --   if event.gui_type == defines.gui_type.achievement	then game.print("achievement") end
-  --   if event.gui_type == defines.gui_type.blueprint_library	then game.print("blueprint_library") end
-  --   if event.gui_type == defines.gui_type.bonus	then game.print("bonus") end
-  --   if event.gui_type == defines.gui_type.controller	then game.print("controller") end
-  --   if event.gui_type == defines.gui_type.custom	then game.print("custom") end
-  --   if event.gui_type == defines.gui_type.entity	then game.print("entity") end
-  --   if event.gui_type == defines.gui_type.equipment	then game.print("equipment") end
-  --   if event.gui_type == defines.gui_type.global_electric_network	then game.print("global_electric_network") end
-  --   if event.gui_type == defines.gui_type.item	then game.print("item") end
-  --   if event.gui_type == defines.gui_type.logistic	then game.print("logistic") end
-  --   if event.gui_type == defines.gui_type.none	then game.print("none") end
-  --   if event.gui_type == defines.gui_type.opened_entity_grid	then game.print("opened_entity_grid") end
-  --   if event.gui_type == defines.gui_type.other_player	then game.print("other_player") end
-  --   if event.gui_type == defines.gui_type.permissions	then game.print("permissions") end
-  --   if event.gui_type == defines.gui_type.player_management	then game.print("player_management") end
-  --   if event.gui_type == defines.gui_type.production	then game.print("production") end
-  --   if event.gui_type == defines.gui_type.script_inventory	then game.print("script_inventory") end
-  --   if event.gui_type == defines.gui_type.server_management	then game.print("server_management") end
-  --   if event.gui_type == defines.gui_type.tile	then game.print("tile") end
-  --   if event.gui_type == defines.gui_type.trains    then game.print("train") end
-  -- end)
+  script.on_event(defines.events.on_entity_died        , handle_spidertron_destroyed, spider_event_filter)
+  script.on_event(defines.events.script_raised_destroy , handle_spidertron_destroyed, spider_event_filter)
+  script.on_event(defines.events.on_robot_mined_entity , handle_spidertron_destroyed, spider_event_filter)
+  script.on_event(defines.events.on_player_mined_entity, handle_spidertron_destroyed, spider_event_filter)
 
-  script.on_event(defines.events.on_gui_closed, function(event)
-    if event.element and event.element.valid and event.element.name == "spidertron_manager_gui"
-    then
-      storage.window_position = event.element.location
-      event.element.destroy()
-      return
-    end
-    if    event.entity
-      and event.entity.valid
-      and event.entity.name == "spidertron"
-      and storage.spidertron_manager_data.selection_target_group
-      and storage.spidertron_manager_data.settings_source_spidertron
-      and storage.spidertron_manager_data.settings_source_spidertron.unit_number == event.entity.unit_number
-      and event.gui_type ~= defines.gui_type.opened_entity_grid
-    then
-      -- game.print("!")
-      apply_settings_to_group(get_event_player(event))
-    end
-  end)
-
-  script.on_event(defines.events.on_player_selected_area, function(event)
-    if event.item ~= "spidertrons-manager-set-home-tool" then return end
-    on_home_area_selected(event)
-  end)
-
-  script.on_event("open_spidertron_gui_shortcut", function(event)
-    open_spidertron_gui(get_event_player(event))
-  end)
-
-  local spider_event_filter = {
-    {filter = "type", type = "spider-vehicle"},
-    {filter = "ghost_name", name = "spidertron"},
-    {filter = "name", name = "spidertron"},
-  }
-
+  -- Остальные события
   script.on_event(defines.events.on_player_changed_surface, on_surface_changed)
-  script.on_event(defines.events.on_player_created        , set_shortcut_availability)
-  script.on_event(defines.events.on_built_entity          , set_shortcut_availability, spider_event_filter)
-  script.on_event(defines.events.on_robot_built_entity    , set_shortcut_availability, spider_event_filter)
-  script.on_event(defines.events.on_entity_died           , set_shortcut_availability, spider_event_filter)
-  script.on_event(defines.events.on_robot_mined_entity    , set_shortcut_availability, spider_event_filter)
-  script.on_event(defines.events.on_player_mined_entity   , set_shortcut_availability, spider_event_filter)
+  script.on_event(defines.events.on_player_created        , update_interface)
+  script.on_event(defines.events.on_built_entity          , update_interface, spider_event_filter)
+  script.on_event(defines.events.on_robot_built_entity    , update_interface, spider_event_filter)
+  script.on_event(defines.events.on_entity_renamed        , handle_entity_renamed)
 
+  script.on_event(defines.events.on_player_cursor_stack_changed, handle_player_cursor_stack_changed)
 end
 
 local function configuration_changed()

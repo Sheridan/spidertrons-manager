@@ -1,6 +1,6 @@
 ---------------------------------------------------------------------------------------------------
 Version: 0.4.8
-Date: 09. 08. 2026
+Date: 23. 10. 2026
   Features:
     - Integrated SpidertronEnhancements pathfinding for 'Call to me'
     - Added a new custom sprite instead of the default shortcut icon.
@@ -10,6 +10,48 @@ Date: 09. 08. 2026
     - Prevent duplicate or stale GUI windows on surface change
   Changes:
     - Updated to Factorio 2.1. No code changes were required.
+Version: 0.4.7
+Date: 20. 10. 2026
+  Minor Features:
+    - Improved spidertron pathfinding. They can now traverse water and lava obstacles, just like manually controlled spidertrons.
+---------------------------------------------------------------------------------------------------
+Version: 0.4.6
+Date: 19. 10. 2026
+  Major Features:
+    - New button: go to location. shift+click: with path finding. If selected area as location - spidertrons will be distributed within the area
+  Minor Features:
+    - Return window back if the player has declined to select area (home or location)
+---------------------------------------------------------------------------------------------------
+Version: 0.4.5
+Date: 18. 10. 2026
+  Gui:
+    - The UI now properly reflects the creation and destruction of spidertrons.
+---------------------------------------------------------------------------------------------------
+Version: 0.4.4
+Date: 17. 10. 2026
+  Major Features:
+    - Better path finding
+---------------------------------------------------------------------------------------------------
+Version: 0.4.3
+Date: 16. 10. 2026
+  Major Features:
+    - Spidertron manager window no longer closes when the map is opened.
+    - Another way to work with internal storage data.
+    - Now, when returning to their home area, Spidertrons will be distributed within the area selected as their home area.
+    - [!] Spidertrons' home positions have been reset. Нou will need to reassign them.
+  Graphics:
+    - "Go to home" sprite changed
+---------------------------------------------------------------------------------------------------
+Version: 0.4.2
+Date: 15. 10. 2026
+  Major Features:
+    - Compatible with Factorio 2.1
+    - I tried to do a pathfinding (shift+click), but it's not working well so far :(
+  Graphics:
+    - "Give remote" sprite changed
+    - "Follow me" sprite changed
+  Bugfixes:
+    - Fix open view
 ---------------------------------------------------------------------------------------------------
 Version: 0.4.1
 Date: 26. 01. 2025

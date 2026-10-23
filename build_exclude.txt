@@ -1,3 +1,4 @@
+.zip
 .git
 .gitignore
 build_exclude.txt

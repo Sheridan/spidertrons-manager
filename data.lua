@@ -18,8 +18,28 @@ data:extend({
     hidden = true,
     hidden_in_factoriopedia = true,
     stack_size = 1,
-    icon = "__core__/graphics/green-circle.png",
-    icon_size = 25,
+    icon = "__spidertrons-manager__/graphics/icons/home-32.png",
+    icon_size = 32,
+    select = {
+      border_color = {10, 95, 163},
+      cursor_box_type = "entity",
+      mode = "nothing"
+    },
+    alt_select = {
+      border_color = {1, 1, 1},
+      cursor_box_type = "entity",
+      mode = "nothing"
+    }
+  },
+  {
+    type = "selection-tool",
+    name = "spidertrons-manager-set-location-tool",
+    flags = { "only-in-cursor", "not-stackable" },
+    hidden = true,
+    hidden_in_factoriopedia = true,
+    stack_size = 1,
+    icon = "__spidertrons-manager__/graphics/icons/to_location-32.png",
+    icon_size = 32,
     select = {
       border_color = {10, 95, 163},
       cursor_box_type = "entity",
@@ -36,37 +56,11 @@ data:extend({
     name = "open_spidertron_gui_shortcut",
     key_sequence = "U"
   },
-  {
-    type = "sprite",
-    name = "give_spidertron_remote",
-    filename = "__spidertrons-manager__/graphics/icons/give_spidertron_remote-64.png",
-    -- priority = "extra-high-no-scale",
-    width = 64,
-    height = 64,
-    flags = {"gui-icon"},
-    mipmap_count = 2,
-    scale = 0.5
-  },
-  {
-    type = "sprite",
-    name = "open_spidertron_settings",
-    filename = "__spidertrons-manager__/graphics/icons/open_spidertron_settings-64.png",
-    -- priority = "extra-high-no-scale",
-    width = 64,
-    height = 64,
-    flags = {"gui-icon"},
-    mipmap_count = 2,
-    scale = 0.5
-  },
-  {
-    type = "sprite",
-    name = "open_spidertron_view",
-    filename = "__spidertrons-manager__/graphics/icons/eye-64.png",
-    -- priority = "extra-high-no-scale",
-    width = 64,
-    height = 64,
-    flags = {"gui-icon"},
-    mipmap_count = 2,
-    scale = 0.5
-  }
+  { type = "sprite", name = "give_spidertron_remote", filename = "__spidertrons-manager__/graphics/icons/give_spidertron_remote-64.png", width = 64, height = 64, flags = { "gui-icon" }, scale = 0.5 },
+  { type = "sprite", name = "open_spidertron_settings", filename = "__spidertrons-manager__/graphics/icons/open_spidertron_settings-64.png", width = 64, height = 64, flags = { "gui-icon" }, scale = 0.5 },
+  { type = "sprite", name = "open_spidertron_view", filename = "__spidertrons-manager__/graphics/icons/eye-64.png", width = 64, height = 64, flags = { "gui-icon" }, scale = 0.5 },
+  { type = "sprite", name = "another_spidertron_remote", filename = "__spidertrons-manager__/graphics/icons/remote-64.png", width = 64, height = 64, flags = { "gui-icon" }, scale = 0.5 },
+  { type = "sprite", name = "spidertron_follow", filename = "__spidertrons-manager__/graphics/icons/follow-64.png", width = 64, height = 64, flags = { "gui-icon" }, scale = 0.5 },
+  { type = "sprite", name = "spidertron_go_to_home", filename = "__spidertrons-manager__/graphics/icons/home-64.png", width = 64, height = 64, flags = { "gui-icon" }, scale = 0.5 },
+  { type = "sprite", name = "spidertron_go_to_location", filename = "__spidertrons-manager__/graphics/icons/to_location-64.png", width = 64, height = 64, flags = { "gui-icon" }, scale = 0.5 }
 })
