@@ -8,6 +8,7 @@ zip_filename = $(mod_dir).zip
 all: build
 
 build:
+	@rm *.zip
 	@echo "Building $(zip_filename)..."
 	@mkdir -p $(mod_dir)
 	@rsync -av --exclude='$(mod_dir)' --exclude='$(zip_filename)' --exclude-from='build_exclude.txt' . $(mod_dir)

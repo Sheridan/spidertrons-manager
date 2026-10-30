@@ -58,3 +58,9 @@ function entity_bigger_than_area(area, collision_box)
   local is_point = area_width < collision_box_width or area_height < collision_box_height
   return not is_point
 end
+
+function distance_squared(p1, p2)
+  local dx = p2.x - p1.x
+  local dy = p2.y - p1.y
+  return dx * dx + dy * dy
+end
