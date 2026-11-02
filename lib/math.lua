@@ -64,3 +64,19 @@ function distance_squared(p1, p2)
   local dy = p2.y - p1.y
   return dx * dx + dy * dy
 end
+
+function get_bounding_box(points)
+    local min_x, max_x = math.huge, -math.huge
+    local min_y, max_y = math.huge, -math.huge
+
+    for _, point in ipairs(points) do
+        if point.x < min_x then min_x = point.x end
+        if point.x > max_x then max_x = point.x end
+        if point.y < min_y then min_y = point.y end
+        if point.y > max_y then max_y = point.y end
+    end
+    return {
+        left_top = { x = min_x, y = min_y },
+        right_bottom = { x = max_x, y = max_y },
+    }
+end

@@ -4,7 +4,10 @@ require("lib.math")
 require("lib.string_util")
 local player_storage = require("lib.player_storage")
 local spidertrons_manager = require("lib.spidertrons_manager")
-local gui = require("lib.gui")
+
+local gui_manager = require("gui.gui_manager")
+local spidertron_manager_gui = require("gui.spidertron_manager")
+local camera_gui = require("gui.camera")
 
 local game_load = false
 
@@ -38,7 +41,7 @@ local function on_button_click_give_remote(event)
   if player and player.is_cursor_empty() then
     local cursor = player.cursor_stack
     cursor.set_stack({name="spidertron-remote"})
-    player.spidertron_remote_selection = spidertrons_manager:get_squad(event.element.tags.surface_name, event.element.tags.squad_name)
+    player.spidertron_remote_selection = spidertrons_manager:get_squad(event.element.tags.surface_name, event.element.tags.squad_name).spidertrons
   end
 end
 
@@ -49,36 +52,13 @@ local function on_button_click_go_home(event)
   local surface = game.surfaces[event.element.tags.surface_name]
   if event.control then
     if player.is_cursor_empty() then
-      spidertrons_manager:select_squad(surface, squad_name)
+      spidertrons_manager:select_squad(spidertrons_manager:get_squad(surface, squad_name))
       local cursor = player.cursor_stack
       cursor.set_stack({name=TOOL_SELECTION_HOME})
-      gui:hide(player)
+      spidertron_manager_gui:hide(player)
     end
   else
-    local home_data = player_storage:load_home(surface.name, squad_name)
-    if not home_data then return end
-    local spidertrons = spidertrons_manager:get_squad(surface, squad_name)
-    if not spidertrons or #spidertrons == 0 then return end
-
-    local use_pathfinding = use_pathfinding(player, event.shift)
-    local positions = {}
-    if home_data.type == "area" and home_data.area then
-      positions = calculate_grid_positions(home_data.area, #spidertrons)
-    else
-      local target_pos = home_data.position or home_data
-      for _ = 1, #spidertrons do
-        table.insert(positions, target_pos)
-      end
-    end
-    for i, spidertron in ipairs(spidertrons) do
-      if spidertron.valid and positions[i] then
-        if use_pathfinding then
-          spidertrons_manager:request_spidertron_path(spidertron, positions[i])
-        else
-          spidertron.autopilot_destination = positions[i]
-        end
-      end
-    end
+    spidertrons_manager:go_home(surface, squad_name, use_pathfinding(player, event.shift))
   end
 end
 
@@ -88,20 +68,44 @@ local function on_button_click_go_location(event)
   local squad_name = event.element.tags.squad_name
   local surface = game.surfaces[event.element.tags.surface_name]
   if player.is_cursor_empty() then
-    spidertrons_manager:select_squad(surface, squad_name)
-    player_storage:save_use_pathfinding(player, use_pathfinding(player, event.shift))
+    spidertrons_manager:select_squad(spidertrons_manager:get_squad(surface, squad_name))
+    player_storage:save_use_pathfinding(player, use_pathfinding(player, event.shift)) -- убрать из сохранения?
     local cursor = player.cursor_stack
     cursor.set_stack({name=TOOL_SELECTION_LOCATION})
-    gui:hide(player)
+    spidertron_manager_gui:hide(player)
   end
 end
 
 local function on_button_click_view(event)
   local player = get_event_player(event)
   if player then
-    spidertrons_manager:view_squad(player, event.element.tags.surface_name, event.element.tags.squad_name);
+    if event.shift then
+      local cam = camera_gui:new(event.element.tags.surface_name, event.element.tags.squad_name)
+      cam:show(player)
+    else
+      spidertrons_manager:view_squad(player, event.element.tags.surface_name, event.element.tags.squad_name);
+    end
   end
 end
+
+local function on_button_hover_view(event)
+  local player = get_event_player(event)
+  if player then
+    spidertrons_manager:preview_squad(player, event.element.tags.surface_name, event.element.tags.squad_name, {
+      x = event.element.location.x,
+      y = event.element.location.y
+    })
+    -- spidertrons_manager:view_squad(player, event.element.tags.surface_name, event.element.tags.squad_name);
+  end
+end
+
+-- local function on_button_hover_close_view(event)
+--   local player = get_event_player(event)
+--   if player then
+--     local cam = camera_gui:new(event.element.tags.surface_name, event.element.tags.squad_name)
+--     cam:show(player)
+--   end
+-- end
 
 local function on_button_click_control(event)
   local player = get_event_player(event)
@@ -115,15 +119,16 @@ local function on_button_click_settings(event)
   if player then
     local squad_name = event.element.tags.squad_name
     local surface_name = event.element.tags.surface_name
-    local source_spidertron = spidertrons_manager:squad_leader(surface_name, squad_name)
+    local squad = spidertrons_manager:get_squad(surface_name, squad_name)
+    local source_spidertron = spidertrons_manager:squad_leader(squad)
     spidertrons_manager:select_spidertron(source_spidertron)
-    spidertrons_manager:select_squad(surface_name, squad_name)
+    spidertrons_manager:select_squad(squad)
     player.set_controller{
       type = defines.controllers.remote,
       position = source_spidertron.position,
       surface = source_spidertron.surface
     }
-    gui:hide(player)
+    spidertron_manager_gui:hide(player)
     player.opened = source_spidertron
   end
 end
@@ -131,71 +136,39 @@ end
 local function on_home_area_selected(event)
   local player = get_event_player(event)
   if not player then return end
-  local target_squad = spidertrons_manager:selected_squad()
-  if not target_squad then return end
-
-  local spidertrons = spidertrons_manager:get_squad(target_squad.surface, target_squad.squad_name)
-  if spidertrons and #spidertrons > 0 and spidertrons[1] and spidertrons[1].valid then
-    if entity_bigger_than_area(event.area, spidertrons[1].prototype.collision_box) then
-      player_storage:save_home(target_squad.surface.name, target_squad.squad_name, event.area, false)
-    else
-      player_storage:save_home(target_squad.surface.name, target_squad.squad_name, event.area, true)
-    end
-  else
-    player_storage:save_home(target_squad.surface.name, target_squad.squad_name, event.area, true)
-  end
-  spidertrons_manager:reset_selection()
-  gui:show(player)
+  spidertrons_manager:store_home(event.area)
+  spidertron_manager_gui:show(player)
   player.cursor_stack.clear()
 end
 
 local function on_location_area_selected(event)
   local player = get_event_player(event)
   if not player then return end
-  local target_squad = spidertrons_manager:selected_squad()
-  if not target_squad then return end
-
-  local spidertrons = spidertrons_manager:get_squad(target_squad.surface, target_squad.squad_name)
-  if not spidertrons or #spidertrons == 0 then return end
-
-  local use_pathfinding = player_storage:load_use_pathfinding(player)
-  local positions = {}
-  local is_area = entity_bigger_than_area(event.area, spidertrons[1].prototype.collision_box)
-  if is_area then
-    positions = calculate_grid_positions(event.area, #spidertrons)
-  else
-    local target_pos = event.position or get_area_center(event.area)
-    for _ = 1, #spidertrons do
-      table.insert(positions, target_pos)
-    end
-  end
-  for i, spidertron in ipairs(spidertrons) do
-    if spidertron.valid and positions[i] then
-      if use_pathfinding then
-        spidertrons_manager:request_spidertron_path(spidertron, positions[i])
-      else
-        spidertron.autopilot_destination = positions[i]
-      end
-    end
-  end
-  spidertrons_manager:reset_selection()
-  gui:show(player)
+  spidertrons_manager:go_location(player, event.area, event.position)
+  spidertron_manager_gui:show(player)
   player.cursor_stack.clear()
 end
 
 local function update_interface(player)
   player.set_shortcut_available(SHORTCUT_NAME, spidertrons_manager:spidertrons_exists())
-  if gui:is_opened(player) then
-    gui:hide(player)
-    gui:show(player)
+  if spidertron_manager_gui:is_opened(player) then
+    spidertron_manager_gui:hide(player)
+    spidertron_manager_gui:show(player)
   end
 end
 
 local function on_surface_changed(event)
   local player = get_event_player(event)
-  if gui:is_opened(player) then
-    gui:select_surface_tab(player, player.surface)
+  if spidertron_manager_gui:is_opened(player) then
+    spidertron_manager_gui:select_surface_tab(player, player.surface)
   end
+end
+
+local function on_window_close_button(event)
+  local player = get_event_player(event)
+  if not player then return end
+  local window_name = event.element.tags.window_name
+  gui_manager:hide_gui(window_name, player)
 end
 
 -- ==========================================
@@ -204,10 +177,10 @@ end
 local function on_shortcut(event)
   local player = get_event_player(event)
   if not player then return end
-  if gui:is_opened(player) then
-    gui:hide(player)
+  if spidertron_manager_gui:is_opened(player) then
+    spidertron_manager_gui:hide(player)
   else
-    gui:show(player)
+    spidertron_manager_gui:show(player)
   end
 end
 
@@ -232,7 +205,17 @@ local function handle_gui_click(event)
   if event.element.name:endswith("sm_settings_button")    then on_button_click_settings(event)   ; return end
   if event.element.name:endswith("sm_view_button")        then on_button_click_view(event)       ; return end
   if event.element.name:endswith("sm_control_button")     then on_button_click_control(event)    ; return end
+  if event.element.name:startswith(GUI_NAME) and
+     event.element.name:endswith("-x-button")             then on_window_close_button(event)    ; return end
 end
+
+-- local function handle_gui_hover(event)
+--   if event.element.name:endswith("sm_view_button")        then on_button_hover_view(event)       ; return end
+-- end
+
+-- local function handle_gui_leave_hover(event)
+--   if event.element.name:endswith("sm_view_button")        then on_button_hover_close_view(event)       ; return end
+-- end
 
 local function handle_script_path_request_finished(event)
   spidertrons_manager:path_request_complete(event.id, event.path, event.try_again_later)
@@ -257,7 +240,7 @@ local function handle_gui_closed(event)
       and event.gui_type ~= defines.gui_type.opened_entity_grid
   then
     spidertrons_manager:apply_settings_to_squad(player)
-    gui:show(player)
+    spidertron_manager_gui:show(player)
   end
 end
 
@@ -273,7 +256,7 @@ local function handle_player_cursor_stack_changed(event)
     local target_squad = spidertrons_manager:selected_squad()
     if target_squad then
       spidertrons_manager:reset_selection()
-      gui:show(player)
+      spidertron_manager_gui:show(player)
     end
   end
 end
@@ -309,8 +292,16 @@ local function game_is_load(event)
     game_load = true
     local player = game.players[1]
     spidertrons_manager:load_spidertrons(player)
-    player.set_shortcut_toggled(SHORTCUT_NAME, gui:is_opened(player))
+    close_all_windows(player)
+    player.set_shortcut_toggled(SHORTCUT_NAME, false)
     script.on_event(defines.events.on_tick, nil)
+  end
+end
+
+local function cameras_tick(event)
+  -- if not game_load then return end
+  for _,gui in pairs(gui_manager:guis(CAMERA_WINDOW_PREFIX)) do
+    gui:update()
   end
 end
 
@@ -328,6 +319,8 @@ local function register_event_handlers()
   script.on_event(SHORTCUT_NAME                                 , handle_custom_shortcut)
   script.on_event(defines.events.on_lua_shortcut                , handle_lua_shortcut)
   script.on_event(defines.events.on_gui_click                   , handle_gui_click)
+  -- script.on_event(defines.events.on_gui_hover                   , handle_gui_hover)
+  -- script.on_event(defines.events.on_gui_leave                   , handle_gui_leave_hover)
   script.on_event(defines.events.on_script_path_request_finished, handle_script_path_request_finished)
   script.on_event(defines.events.on_spider_command_completed    , handle_spider_command_completed)
   script.on_event(defines.events.on_gui_closed                  , handle_gui_closed)
@@ -346,6 +339,7 @@ local function register_event_handlers()
   script.on_event(defines.events.on_player_changed_surface, on_surface_changed)
   script.on_event(defines.events.on_player_cursor_stack_changed, handle_player_cursor_stack_changed)
   script.on_event(defines.events.on_tick, game_is_load)
+  script.on_nth_tick(2, cameras_tick)
 end
 
 local function configuration_changed()

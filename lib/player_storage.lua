@@ -110,12 +110,12 @@ end
 --- User methods
 ---------------------------------
 
-function CPlayerStorage:load_window_position(player)
-  return self:_load_player_data(player, "window_position", nil)
+function CPlayerStorage:load_window_location(player, window_name)
+  return self:_load_player_data(player, "window_location:" .. window_name, nil)
 end
 
-function CPlayerStorage:save_window_position(player, position)
-  return self:_save_player_data(player, "window_position", position)
+function CPlayerStorage:save_window_location(player, window_name, location)
+  return self:_save_player_data(player, "window_location:" .. window_name, location)
 end
 
 function CPlayerStorage:load_use_pathfinding(player)

@@ -1,4 +1,17 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.5.2
+Date: 02. 11. 2026
+  Major Features:
+    - Added a remote camera window to follow spidertron groups, accessible via Shift+Click on the "Center on group" button. The camera is dynamic and tracks the group.
+  Changes:
+    - Added a close button to all windows.
+    - Refactored the GUI code.
+---------------------------------------------------------------------------------------------------
+Version: 0.5.1
+Date: 31. 10. 2026
+  Bugfixes:
+    - Squad with one spidertron now properly "applies options".
+---------------------------------------------------------------------------------------------------
 Version: 0.5.0
 Date: 31. 10. 2026
   Major Features:

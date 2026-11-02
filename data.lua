@@ -70,6 +70,12 @@ data:extend({
     type = "font",
     from = "default-bold",
     size = 18
+  },
+    {
+    type = "font",
+    name = "sm_window_caption_font",
+    from = "default-bold",
+    size = 8
   }
 })
 
@@ -101,7 +107,6 @@ extend_raw('gui-style', {
   horizontally_stretchable = "on",
   horizontally_squashable = "on"
 })
-
 extend_raw('gui-style', {
   type = "tab_style",
   parent = "tab",
@@ -109,7 +114,19 @@ extend_raw('gui-style', {
   margin = 2,
   padding = 2
 })
-
+extend_raw('gui-style', {
+  type = "button_style",
+  parent = "close_button",
+  name = "sm_window_close_button",
+  size = 16,
+  margin = 0
+})
+extend_raw('gui-style', {
+  type = "label_style",
+  parent = "label",
+  name = "sm_window_caption_label",
+  font = "sm_window_caption_font"
+})
 -- row --
 
 extend_raw('gui-style', {
