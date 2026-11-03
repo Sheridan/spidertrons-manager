@@ -2,13 +2,14 @@ require("lib.math")
 require("lib.string_util")
 require("lib.game")
 require("lib.debug")
+local path_requester = require("lib.pathrequester")
 
 local player_storage = require("lib.player_storage")
-local Singleton = require("lib.singleton")
 
+
+local Singleton = require("lib.singleton")
 local CSpidertronsManager = {}
 CSpidertronsManager.__index = CSpidertronsManager
-
 local CSpidertronsManager = Singleton.derive("CSpidertronsManager")
 
 function CSpidertronsManager:_init()
@@ -104,26 +105,23 @@ function CSpidertronsManager:squad_exists(surface, squad_name)
 end
 
 
-function CSpidertronsManager:squad_bounding_box(surface, squad_name)
-  local squad = self:get_squad(surface, squad_name)
-  local positions = {}
-  for _, spidertron in ipairs(squad.spidertrons) do
-    table.insert(positions, spidertron.position)
-  end
-  local bounding_box = get_bounding_box(positions)
+function CSpidertronsManager:squad_bounding_box(squad)
+  local min_x, max_x = math.huge, -math.huge
+  local min_y, max_y = math.huge, -math.huge
   local collision_box = self:squad_leader(squad).prototype.collision_box
+  local collision_box_width  = collision_box.right_bottom.x - collision_box.left_top.x
+  local collision_box_height = collision_box.right_bottom.y - collision_box.left_top.y
 
-  local cb_width  = collision_box.right_bottom.x - collision_box.left_top.x
-  local cb_height = collision_box.right_bottom.y - collision_box.left_top.y
-
+  for _, spidertron in ipairs(squad.spidertrons) do
+    if spidertron.position.x < min_x then min_x = spidertron.position.x end
+    if spidertron.position.x > max_x then max_x = spidertron.position.x end
+    if spidertron.position.y < min_y then min_y = spidertron.position.y end
+    if spidertron.position.y > max_y then max_y = spidertron.position.y end
+  end
   return {
-      left_top = {
-        x = bounding_box.left_top.x - cb_width,
-        y = bounding_box.left_top.y - cb_height },
-      right_bottom = {
-        x = bounding_box.right_bottom.x + cb_width,
-        y = bounding_box.right_bottom.y + cb_height  }
-    }
+    left_top     = { x = min_x - collision_box_width, y = min_y - collision_box_height },
+    right_bottom = { x = max_x + collision_box_width, y = max_y + collision_box_height },
+  }
 end
 
 ---
@@ -178,6 +176,17 @@ end
 --- movement
 ---
 
+function CSpidertronsManager:squad_is_moving(squad)
+  for _, spidertron in ipairs(squad.spidertrons) do
+    if spidertron.speed > 0 then
+      -- log("Squad is moving")
+      return true
+    end
+  end
+  -- log("Squad stopped")
+  return false
+end
+
 function CSpidertronsManager:go_location(player, area, position)
   local squad = self:selected_squad()
   if self:squad_valid(squad) then
@@ -193,9 +202,10 @@ function CSpidertronsManager:go_location(player, area, position)
       end
     end
     for i, spidertron in ipairs(squad.spidertrons) do
+      player_storage:rm_follower(spidertron) -- if prev be called "follow me"
       if spidertron.valid and positions[i] then
         if use_pathfinding then
-          self:request_spidertron_path(spidertron, positions[i])
+          self:request_spidertron_path(spidertron, positions[i], i)
         else
           spidertron.autopilot_destination = positions[i]
         end
@@ -220,9 +230,10 @@ function CSpidertronsManager:go_home(surface, squad_name, use_pathfinding)
     end
   end
   for i, spidertron in ipairs(spidertrons) do
+    player_storage:rm_follower(spidertron) -- if prev be called "follow me"
     if spidertron.valid and positions[i] then
       if use_pathfinding then
-        self:request_spidertron_path(spidertron, positions[i])
+        self:request_spidertron_path(spidertron, positions[i], i)
       else
         spidertron.autopilot_destination = positions[i]
       end
@@ -233,10 +244,11 @@ end
 function CSpidertronsManager:follow_me(player, surface, squad_name, use_pathfinding)
   if player and player.character then
     local squad = self:get_squad(surface, squad_name)
-    for _, spidertron in ipairs(squad.spidertrons) do
+    for i, spidertron in ipairs(squad.spidertrons) do
       if spidertron.valid then
+        player_storage:rm_follower(spidertron) -- if prev be called "follow me"
         if use_pathfinding then
-          self:request_spidertron_path(spidertron, player.character.position)
+          self:request_spidertron_path(spidertron, player.character.position, i)
           local data = {
             player_index = player.index,
             goal = player.character.position,
@@ -272,46 +284,8 @@ end
 --- path requesting
 ---
 
-function CSpidertronsManager:request_spidertron_path(spidertron, goal_position)
-  if not spidertron or not spidertron.valid then return end
-  local surface = spidertron.surface
-  local MAX_GAP = 10
-  local original_mask = spidertron.prototype.collision_mask
-  local mask = {
-    layers = {},
-    not_colliding_with_itself = original_mask and original_mask.not_colliding_with_itself or false
-  }
-  if original_mask and original_mask.layers then
-    for layer, val in pairs(original_mask.layers) do
-      mask.layers[layer] = val
-    end
-  end
-  mask.layers["water_tile"] = true
-  mask.layers["lava_tile"] = true
-
-  local path_id = surface.request_path{
-    bounding_box = spidertron.prototype.collision_box,
-    collision_mask = mask,
-    start = spidertron.position,
-    goal = goal_position,
-    force = spidertron.force,
-    radius = 4,
-    entity_to_ignore = spidertron,
-    max_gap_size = MAX_GAP,
-    max_attack_distance = MAX_GAP,
-    pathfind_flags = {
-      cache = false,
-      prefer_straight_paths = false,
-      allow_paths_through_own_entities = true
-    }
-  }
-  if not path_id then return end
-
-  local path_data = {
-    spidertron_unit = spidertron.unit_number,
-    goal = goal_position
-  }
-  player_storage:save_path_request(path_id, path_data)
+function CSpidertronsManager:request_spidertron_path(spidertron, goal_position, index)
+  path_requester:new(spidertron, goal_position, index)
 end
 
 function CSpidertronsManager:path_request_complete(request_id, path, try_again_later)
@@ -322,7 +296,7 @@ function CSpidertronsManager:path_request_complete(request_id, path, try_again_l
   if not spidertron or not spidertron.valid then return end
 
   if try_again_later then
-    spidertron.autopilot_destination = request_metadata.goal -- need to shedule another try
+    path_requester:new(spidertron, request_metadata.goal, 16)
     return
   end
   if path and #path > 0 then

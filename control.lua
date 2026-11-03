@@ -8,6 +8,7 @@ local spidertrons_manager = require("lib.spidertrons_manager")
 local gui_manager = require("gui.gui_manager")
 local spidertron_manager_gui = require("gui.spidertron_manager")
 local camera_gui = require("gui.camera")
+-- local scheduler = require("lib.scheduler")
 
 local game_load = false
 
@@ -87,25 +88,6 @@ local function on_button_click_view(event)
     end
   end
 end
-
-local function on_button_hover_view(event)
-  local player = get_event_player(event)
-  if player then
-    spidertrons_manager:preview_squad(player, event.element.tags.surface_name, event.element.tags.squad_name, {
-      x = event.element.location.x,
-      y = event.element.location.y
-    })
-    -- spidertrons_manager:view_squad(player, event.element.tags.surface_name, event.element.tags.squad_name);
-  end
-end
-
--- local function on_button_hover_close_view(event)
---   local player = get_event_player(event)
---   if player then
---     local cam = camera_gui:new(event.element.tags.surface_name, event.element.tags.squad_name)
---     cam:show(player)
---   end
--- end
 
 local function on_button_click_control(event)
   local player = get_event_player(event)
@@ -209,14 +191,6 @@ local function handle_gui_click(event)
      event.element.name:endswith("-x-button")             then on_window_close_button(event)    ; return end
 end
 
--- local function handle_gui_hover(event)
---   if event.element.name:endswith("sm_view_button")        then on_button_hover_view(event)       ; return end
--- end
-
--- local function handle_gui_leave_hover(event)
---   if event.element.name:endswith("sm_view_button")        then on_button_hover_close_view(event)       ; return end
--- end
-
 local function handle_script_path_request_finished(event)
   spidertrons_manager:path_request_complete(event.id, event.path, event.try_again_later)
 end
@@ -298,13 +272,6 @@ local function game_is_load(event)
   end
 end
 
-local function cameras_tick(event)
-  -- if not game_load then return end
-  for _,gui in pairs(gui_manager:guis(CAMERA_WINDOW_PREFIX)) do
-    gui:update()
-  end
-end
-
 -- ==========================================
 -- Initialization & Registration
 -- ==========================================
@@ -319,8 +286,6 @@ local function register_event_handlers()
   script.on_event(SHORTCUT_NAME                                 , handle_custom_shortcut)
   script.on_event(defines.events.on_lua_shortcut                , handle_lua_shortcut)
   script.on_event(defines.events.on_gui_click                   , handle_gui_click)
-  -- script.on_event(defines.events.on_gui_hover                   , handle_gui_hover)
-  -- script.on_event(defines.events.on_gui_leave                   , handle_gui_leave_hover)
   script.on_event(defines.events.on_script_path_request_finished, handle_script_path_request_finished)
   script.on_event(defines.events.on_spider_command_completed    , handle_spider_command_completed)
   script.on_event(defines.events.on_gui_closed                  , handle_gui_closed)
@@ -339,7 +304,6 @@ local function register_event_handlers()
   script.on_event(defines.events.on_player_changed_surface, on_surface_changed)
   script.on_event(defines.events.on_player_cursor_stack_changed, handle_player_cursor_stack_changed)
   script.on_event(defines.events.on_tick, game_is_load)
-  script.on_nth_tick(2, cameras_tick)
 end
 
 local function configuration_changed()

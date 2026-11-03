@@ -1,4 +1,12 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.5.3
+Date: 03. 11. 2026
+  Bugfixes:
+    - Spidertrons no longer return to the character after completing a "go home" or "go location" command, even when issued immediately after "follow me".
+  Optimizations:
+    - Optimized camera position and zoom calculation code, achieving up to 4x performance improvement.
+    - Added a delayed retry (a few ticks) for failed path requests. Additionally, prevented sending multiple path requests within a single tick to reduce load.
+---------------------------------------------------------------------------------------------------
 Version: 0.5.2
 Date: 02. 11. 2026
   Major Features:
